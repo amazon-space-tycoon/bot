@@ -162,6 +162,9 @@ class Game:
         my_shipyards: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                     self.my_ships.items() if self.static_data.ship_classes[ship.ship_class].shipyard}
 
+        if not my_shipyards:
+            return
+
         trading_ships_total = 0
         for ship in self.my_ships.values():
             if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
