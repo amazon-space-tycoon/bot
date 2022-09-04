@@ -18,6 +18,7 @@ from space_tycoon_client.models.end_turn import EndTurn
 from space_tycoon_client.models.move_command import MoveCommand
 from space_tycoon_client.models.trade_command import TradeCommand
 from space_tycoon_client.models.construct_command import ConstructCommand
+from space_tycoon_client.models.attack_command import AttackCommand
 from space_tycoon_client.models.player import Player
 from space_tycoon_client.models.player_id import PlayerId
 from space_tycoon_client.models.ship import Ship
@@ -85,8 +86,12 @@ class Game:
         for ship_id, ship in self.my_ships.items():
             if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
                 for enemy_id, enemy in self.other_ships.items():
-                    if distance(enemy.position, mothership.position) < 10:
+                    if compute_distance(enemy.position, mothership.position) < 10:
                         return AttackCommand(enemy)
+            elif ship.ship_class == "1":
+                for enemy_id, enemy in self.other_ships.items():
+                    if compute_distance(enemy.position, ship.position) < 10:
+                        return AttackCommand(target=enemy_id)
 
     def trade(self):
         for ship_id, ship in self.my_ships.items():
@@ -187,6 +192,9 @@ class Game:
                                      self.data.ships.items() if ship.player == self.player_id}
         self.other_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                         self.data.ships.items() if ship.player != self.player_id}
+        mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
+        self.mothership = mothership_list[0] if mothership_list else None
+
         ship_type_cnt = Counter(
             (self.static_data.ship_classes[ship.ship_class].name for ship in self.my_ships.values()))
         pretty_ship_type_cnt = ', '.join(
