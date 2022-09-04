@@ -84,7 +84,7 @@ class Game:
 
     def defend_mothership(self):
         for ship_id, ship in self.my_ships.items():
-            if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
+            if self.mothership and ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
                 for enemy_id, enemy in self.other_ships.items():
                     if compute_distance(enemy.position, self.mothership.position) < 10:
                         return AttackCommand(enemy)
