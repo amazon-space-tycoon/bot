@@ -85,8 +85,8 @@ class Game:
         for ship_id, ship in self.my_ships.items():
             if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
                 for enemy_id, enemy in self.other_ships.items():
-                    if enemy.player != "amazon" and distance(enemy.position, mothership.position) < 10:
-                        return AttackCommand(ship)
+                    if distance(enemy.position, mothership.position) < 10:
+                        return AttackCommand(enemy)
 
     def trade(self):
         for ship_id, ship in self.my_ships.items():
@@ -160,7 +160,10 @@ class Game:
                     self.commands[ship_id] = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
 
     def attack(self):
-        ...
+        for ship_id, ship in self.my_ships.items():
+            if ship.ship_class == "4" or ship.ship_class == "5" and ship.command is None:  # fighter or bomber dont defend mothership
+                for enemy_id, enemy in self.other_ships.items():
+                    return AttackCommand(enemy)
 
     def buy_ships(self):
         my_shipyards: Dict[Ship] = {ship_id: ship for ship_id, ship in
