@@ -81,21 +81,27 @@ class Game:
             if ship.command is not None:
                 continue
 
-            random_planet_id = random.choice(list(self.data.planets.keys()))
-            random_planet = self.data.planets[random_planet_id]
-
-            buy_id = 0
-            buy_amt = 0
-            for res_id, resource in random_planet.resources.items():
-                if resource.amount > 0:
-                    buy_id = res_id
-                    buy_amt = min(resource.amount, 10)
-                    break
+            if len(ship.resources):
+                for planet_id, planet in self.data.planets.items():
+                    for res_id, resource in planet.resources.items():
+                        if res_id == list(ship.resources.keys())[0] and resource.sell_price:
+                            self.commands[ship_id] = TradeCommand(target=planet_id, resource=res_id, amount=-ship.resources[res_id]["amount"])
             else:
-                continue
+                random_planet_id = random.choice(list(self.data.planets.keys()))
+                random_planet = self.data.planets[random_planet_id]
 
-            print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
-            self.commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
+                buy_id = 0
+                buy_amt = 0
+                for res_id, resource in random_planet.resources.items():
+                    if resource.amount > 0:
+                        buy_id = res_id
+                        buy_amt = min(resource.amount, 10)
+                        break
+                else:
+                    continue
+
+                print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
+                self.commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
 
     def attack(self):
         ...
@@ -134,7 +140,6 @@ class Game:
             password=self.config["password"],
         ), _return_http_data_only=False)
         self.client.api_client.cookie = headers['Set-Cookie']
-        print(self.client.api_client.cookie)
         player: PlayerId = player
         return player.id
 
