@@ -82,7 +82,11 @@ class Game:
                 print(traceback.format_exc())
 
     def defend_mothership(self):
-        ...
+        for ship_id, ship in self.my_ships.items():
+            if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
+                for enemy_id, enemy in self.other_ships.items():
+                    if enemy.player != "amazon" and distance(enemy.position, mothership.position) < 10:
+                        return AttackCommand(ship)
 
     def trade(self):
         for ship_id, ship in self.my_ships.items():
