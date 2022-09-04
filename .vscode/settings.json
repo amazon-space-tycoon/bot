@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./space_tycoon_generated_client/build/lib"
+    ]
+}

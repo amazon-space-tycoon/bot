@@ -15,6 +15,7 @@ from space_tycoon_client.models.data import Data
 from space_tycoon_client.models.destination import Destination
 from space_tycoon_client.models.end_turn import EndTurn
 from space_tycoon_client.models.move_command import MoveCommand
+from space_tycoon_client.models.trade_command import TradeCommand
 from space_tycoon_client.models.player import Player
 from space_tycoon_client.models.player_id import PlayerId
 from space_tycoon_client.models.ship import Ship
@@ -83,21 +84,34 @@ class Game:
             f"{k}:{v}" for k, v in ship_type_cnt.most_common())
         print(f"I have {len(my_ships)} ships ({pretty_ship_type_cnt})")
 
-        # commands = {}
-        # for ship_id, ship in my_ships.items():
-        #     if ship.command is not None:
-        #         continue
-        #     random_planet_id = random.choice(list(self.data.planets.keys()))
-        #     print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
-        #     commands[ship_id] = MoveCommand(type="move", destination=Destination(target=random_planet_id))
+        commands = {}
+        for ship_id, ship in my_ships.items():
+            if ship.command is not None:
+                continue
 
-        # pprint(commands) if commands else None
-        # try:
-        #     self.client.commands_post(commands)
-        # except ApiException as e:
-        #     if e.status == 400:
-        #         print("some commands failed")
-        #         print(e.body)
+            random_planet_id = random.choice(list(self.data.planets.keys()))
+            random_planet = self.data.planets[random_planet_id]
+
+            buy_id = 0
+            buy_amt = 0
+            for res_id, resource in random_planet.resources.items():
+                if resource.amount > 0:
+                    buy_id = res_id
+                    buy_amt = resource.amount
+                    break
+            else:
+                continue
+
+            print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
+            commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
+
+        pprint(commands) if commands else None
+        try:
+            self.client.commands_post(commands)
+        except ApiException as e:
+            if e.status == 400:
+                print("some commands failed")
+                print(e.body)
 
     def login(self) -> str:
         if self.config["user"] == "?":
@@ -109,6 +123,7 @@ class Game:
             password=self.config["password"],
         ), _return_http_data_only=False)
         self.client.api_client.cookie = headers['Set-Cookie']
+        print(self.client.api_client.cookie)
         player: PlayerId = player
         return player.id
 
