@@ -86,7 +86,7 @@ class Game:
         for ship_id, ship in self.my_ships.items():
             if self.mothership and ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
                 for enemy_id, enemy in self.other_ships.items():
-                    if compute_distance(enemy.position, self.mothership.position) < 10:
+                    if compute_distance(enemy.position, self.my_ships[self.mothership].position) < 10:
                         return AttackCommand(enemy)
             elif ship.ship_class == "1":
                 for enemy_id, enemy in self.other_ships.items():
@@ -161,6 +161,7 @@ class Game:
                                     best_buy_amt = max_amt
 
                 if best_trade:
+                    self.data.planets[best_buy_id].resources[best_buy_res].amount -= best_buy_amt
                     print(f"sending {ship_id} to {self.data.planets[best_buy_id].name}({best_buy_id})")
                     self.commands[ship_id] = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
 
@@ -177,7 +178,7 @@ class Game:
         if not my_shipyards:
             return
 
-        fighters_count = len([1 for ship in self.my_ships if ship.ship_class == "4" or ship.ship_class == "5"])
+        fighters_count = len([1 for ship in self.my_ships.values() if ship.ship_class == "4" or ship.ship_class == "5"])
         if fighters_count < 3:
             self.commands[self.mothership] = ConstructCommand(ship_class="4")
             return
