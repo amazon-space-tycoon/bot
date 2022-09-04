@@ -100,12 +100,12 @@ class Game:
 
             ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
 
-            if ship.command is not None:
-                if ship.command.type == "trade":
-                    if ship.command.amount > 0 and self.data.planets[ship.command.target].resources[ship.command.resource].buy_price:
-                        continue
-                    elif ship.command.amount < 0 and self.data.planets[ship.command.target].resources[ship.command.resource].sell_price:
-                        continue
+            # if ship.command is not None:
+            #     if ship.command.type == "trade":
+            #         if ship.command.amount > 0 and self.data.planets[ship.command.target].resources[ship.command.resource].buy_price:
+            #             continue
+            #         elif ship.command.amount < 0 and self.data.planets[ship.command.target].resources[ship.command.resource].sell_price:
+            #             continue
 
             if len(ship.resources):
                 best_trade = 0.
@@ -169,7 +169,7 @@ class Game:
         ships_to_attack = []
         for ship_id, ship in self.my_ships.items():
             if ship.ship_class == "4" or ship.ship_class == "5" and ship.command is None:  # fighter or bomber dont defend mothership
-                ships_to_attack.append(ship)
+                ships_to_attack.append((ship_id, ship))
         enemy = random.choice(list(self.other_ships.items()))
         for ship_id, ship in ships_to_attack:
             self.commands[ship_id] = AttackCommand(enemy)
