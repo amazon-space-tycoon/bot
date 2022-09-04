@@ -16,6 +16,7 @@ from space_tycoon_client.models.destination import Destination
 from space_tycoon_client.models.end_turn import EndTurn
 from space_tycoon_client.models.move_command import MoveCommand
 from space_tycoon_client.models.trade_command import TradeCommand
+from space_tycoon_client.models.construct_command import ConstructCommand
 from space_tycoon_client.models.player import Player
 from space_tycoon_client.models.player_id import PlayerId
 from space_tycoon_client.models.ship import Ship
@@ -125,6 +126,18 @@ class Game:
     def attack(self):
         ...
 
+    def buy_ships(self):
+        my_shipyards: Dict[Ship] = {ship_id: ship for ship_id, ship in
+                                    self.my_ships.items() if self.static_data.ship_classes[ship.ship_class].shipyard}
+
+        trading_ships_total = 0
+        for ship in self.my_ships.values():
+            if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
+                trading_ships_total += self.static_data.ship_classes[ship.ship_class].price
+        if trading_ships_total < (self.data.players[self.player_id].net_worth.money // 3):
+            random_shipyard = random.choice(list(my_shipyards.keys()))
+            self.commands[random_shipyard] = ConstructCommand(ship_class="3")
+
     def game_logic(self):
         # todo throw all this away
         self.recreate_me()
@@ -137,6 +150,7 @@ class Game:
         print(f"I have {len(self.my_ships)} ships ({pretty_ship_type_cnt})")
 
         self.commands = {}
+        self.buy_ships()
         self.defend_mothership()
         self.trade()
         self.attack()
