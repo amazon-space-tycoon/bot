@@ -93,9 +93,10 @@ class Game:
                 buy_id = 0
                 buy_amt = 0
                 for res_id, resource in random_planet.resources.items():
-                    if resource.amount > 0:
+                    capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
+                    if resource.amount > 0 and self.static_data.ship_classes[ship.ship_class].cargo_capacity:
                         buy_id = res_id
-                        buy_amt = min(resource.amount, 10)
+                        buy_amt = min(resource.amount, capacity)
                         break
                 else:
                     continue
