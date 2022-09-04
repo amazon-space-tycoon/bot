@@ -73,19 +73,11 @@ class Game:
                 print(f"!!! EXCEPTION !!! Game logic error {e}")
                 traceback.print_exception(e)
 
-    def game_logic(self):
-        # todo throw all this away
-        self.recreate_me()
-        my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
-                                self.data.ships.items() if ship.player == self.player_id}
-        ship_type_cnt = Counter(
-            (self.static_data.ship_classes[ship.ship_class].name for ship in my_ships.values()))
-        pretty_ship_type_cnt = ', '.join(
-            f"{k}:{v}" for k, v in ship_type_cnt.most_common())
-        print(f"I have {len(my_ships)} ships ({pretty_ship_type_cnt})")
+    def defend_mothership(self):
+        ...
 
-        commands = {}
-        for ship_id, ship in my_ships.items():
+    def trade(self):
+        for ship_id, ship in self.my_ships.items():
             if ship.command is not None:
                 continue
 
@@ -97,17 +89,36 @@ class Game:
             for res_id, resource in random_planet.resources.items():
                 if resource.amount > 0:
                     buy_id = res_id
-                    buy_amt = resource.amount
+                    buy_amt = min(resource.amount, 10)
                     break
             else:
                 continue
 
             print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
-            commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
+            self.commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
 
-        pprint(commands) if commands else None
+    def attack(self):
+        ...
+
+    def game_logic(self):
+        # todo throw all this away
+        self.recreate_me()
+        self.my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
+                                     self.data.ships.items() if ship.player == self.player_id}
+        ship_type_cnt = Counter(
+            (self.static_data.ship_classes[ship.ship_class].name for ship in self.my_ships.values()))
+        pretty_ship_type_cnt = ', '.join(
+            f"{k}:{v}" for k, v in ship_type_cnt.most_common())
+        print(f"I have {len(self.my_ships)} ships ({pretty_ship_type_cnt})")
+
+        self.commands = {}
+        self.defend_mothership()
+        self.trade()
+        self.attack()
+
+        pprint(self.commands) if self.commands else None
         try:
-            self.client.commands_post(commands)
+            self.client.commands_post(self.commands)
         except ApiException as e:
             if e.status == 400:
                 print("some commands failed")
