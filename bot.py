@@ -91,7 +91,7 @@ class Game:
             elif ship.ship_class == "1":
                 for enemy_id, enemy in self.other_ships.items():
                     if compute_distance(enemy.position, ship.position) < 10:
-                        self.commands[ship_id] =  AttackCommand(target=enemy_id)
+                        self.commands[ship_id] = AttackCommand(target=enemy_id)
 
     def trade(self):
         for ship_id, ship in self.my_ships.items():
