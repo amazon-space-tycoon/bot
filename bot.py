@@ -143,6 +143,8 @@ class Game:
         self.recreate_me()
         self.my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                      self.data.ships.items() if ship.player == self.player_id}
+        self.other_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
+                                        self.data.ships.items() if ship.player != self.player_id}
         ship_type_cnt = Counter(
             (self.static_data.ship_classes[ship.ship_class].name for ship in self.my_ships.values()))
         pretty_ship_type_cnt = ', '.join(
