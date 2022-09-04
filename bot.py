@@ -83,21 +83,21 @@ class Game:
             f"{k}:{v}" for k, v in ship_type_cnt.most_common())
         print(f"I have {len(my_ships)} ships ({pretty_ship_type_cnt})")
 
-        commands = {}
-        for ship_id, ship in my_ships.items():
-            if ship.command is not None:
-                continue
-            random_planet_id = random.choice(list(self.data.planets.keys()))
-            print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
-            commands[ship_id] = MoveCommand(type="move", destination=Destination(target=random_planet_id))
+        # commands = {}
+        # for ship_id, ship in my_ships.items():
+        #     if ship.command is not None:
+        #         continue
+        #     random_planet_id = random.choice(list(self.data.planets.keys()))
+        #     print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
+        #     commands[ship_id] = MoveCommand(type="move", destination=Destination(target=random_planet_id))
 
-        pprint(commands) if commands else None
-        try:
-            self.client.commands_post(commands)
-        except ApiException as e:
-            if e.status == 400:
-                print("some commands failed")
-                print(e.body)
+        # pprint(commands) if commands else None
+        # try:
+        #     self.client.commands_post(commands)
+        # except ApiException as e:
+        #     if e.status == 400:
+        #         print("some commands failed")
+        #         print(e.body)
 
     def login(self) -> str:
         if self.config["user"] == "?":
