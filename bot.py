@@ -164,7 +164,7 @@ class Game:
         for ship_id, ship in self.my_ships.items():
             if ship.ship_class == "4" or ship.ship_class == "5" and ship.command is None:  # fighter or bomber dont defend mothership
                 ships_to_attack.add(ship)
-        enemy = random.choice(list(self.other_ships.items))
+        enemy = random.choice(list(self.other_ships.items()))
         for ship_id, ship in ships_to_attack:
             self.commands[ship_id] = AttackCommand(enemy)
 
