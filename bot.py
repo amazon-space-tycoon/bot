@@ -86,7 +86,7 @@ class Game:
         for ship_id, ship in self.my_ships.items():
             if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
                 for enemy_id, enemy in self.other_ships.items():
-                    if compute_distance(enemy.position, mothership.position) < 10:
+                    if compute_distance(enemy.position, self.mothership.position) < 10:
                         return AttackCommand(enemy)
             elif ship.ship_class == "1":
                 for enemy_id, enemy in self.other_ships.items():
