@@ -1,3 +1,4 @@
+import math
 import random
 import traceback
 from collections import Counter
@@ -22,6 +23,12 @@ from space_tycoon_client.models.static_data import StaticData
 from space_tycoon_client.rest import ApiException
 
 CONFIG_FILE = "config.yml"
+
+
+def compute_distance(a, b):
+    (xa, ya) = a
+    (xb, yb) = b
+    return math.sqrt((xa-xb)**2 + (ya-yb)**2)
 
 
 class ConfigException(Exception):
