@@ -71,20 +71,37 @@ class Game:
                     raise e
             except Exception as e:
                 print(f"!!! EXCEPTION !!! Game logic error {e}")
-                traceback.print_exception(e)
+                print(traceback.format_exc())
 
     def defend_mothership(self):
         ...
 
     def trade(self):
+        average = {}
+        for planet_id, planet in self.data.planets.items():
+            for res_id, resource in planet.resources.items():
+                if res_id not in average:
+                    average[res_id] = []
+                else:
+                    if resource.buy_price:
+                        average[res_id].append(resource.buy_price)
+                    if resource.sell_price:
+                        average[res_id].append(resource.sell_price)
+        for k in average.keys():
+            average[k] = sum(average[k]) / len(average[k])
+
         for ship_id, ship in self.my_ships.items():
             if ship.command is not None:
-                continue
+                if ship.command.type == "trade":
+                    if ship.command.amount > 0 and self.data.planets[ship.command.target].resources[ship.command.resource].buy_price:
+                        continue
+                    elif ship.command.amount < 0 and self.data.planets[ship.command.target].resources[ship.command.resource].sell_price:
+                        continue
 
             if len(ship.resources):
                 for planet_id, planet in self.data.planets.items():
                     for res_id, resource in planet.resources.items():
-                        if res_id == list(ship.resources.keys())[0] and resource.sell_price:
+                        if res_id == list(ship.resources.keys())[0] and resource.sell_price and resource.sell_price > average[res_id]:
                             self.commands[ship_id] = TradeCommand(target=planet_id, resource=res_id, amount=-ship.resources[res_id]["amount"])
             else:
                 random_planet_id = random.choice(list(self.data.planets.keys()))
@@ -93,11 +110,12 @@ class Game:
                 buy_id = 0
                 buy_amt = 0
                 for res_id, resource in random_planet.resources.items():
-                    capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
-                    if resource.amount > 0 and self.static_data.ship_classes[ship.ship_class].cargo_capacity:
-                        buy_id = res_id
-                        buy_amt = min(resource.amount, capacity)
-                        break
+                    if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
+                        capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
+                        if resource.buy_price and resource.amount > 0 and resource.buy_price < average[res_id]:
+                            buy_id = res_id
+                            buy_amt = min(resource.amount, capacity)
+                            break
                 else:
                     continue
 
