@@ -85,20 +85,12 @@ class Game:
         ...
 
     def trade(self):
-        average = {}
-        for planet_id, planet in self.data.planets.items():
-            for res_id, resource in planet.resources.items():
-                if res_id not in average:
-                    average[res_id] = []
-                else:
-                    if resource.buy_price:
-                        average[res_id].append(resource.buy_price)
-                    if resource.sell_price:
-                        average[res_id].append(resource.sell_price)
-        for k in average.keys():
-            average[k] = sum(average[k]) / len(average[k])
-
         for ship_id, ship in self.my_ships.items():
+            if ship.ship_class != "2" and ship.ship_class != "3":  # shiper or hauler
+                continue
+
+            ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
+
             if ship.command is not None:
                 if ship.command.type == "trade":
                     if ship.command.amount > 0 and self.data.planets[ship.command.target].resources[ship.command.resource].buy_price:
@@ -107,28 +99,61 @@ class Game:
                         continue
 
             if len(ship.resources):
-                for planet_id, planet in self.data.planets.items():
-                    for res_id, resource in planet.resources.items():
-                        if res_id == list(ship.resources.keys())[0] and resource.sell_price and resource.sell_price > average[res_id]:
-                            self.commands[ship_id] = TradeCommand(target=planet_id, resource=res_id, amount=-ship.resources[res_id]["amount"])
+                best_trade = 0.
+                best_sell_id = ""
+                best_sell_res = ""
+
+                for sell_planet_id, sell_planet in self.data.planets.items():
+                    for ship_res_id, ship_resource in ship.resources.items():
+                        for sell_res_id, sell_resource in sell_planet.resources.items():
+                            if ship_res_id != sell_res_id:
+                                continue
+                            if not sell_resource.sell_price:
+                                continue
+
+                            gain_raw = sell_resource.sell_price * ship_resource["amount"]
+                            total_distance = compute_distance(ship.position, sell_planet.position)
+                            gain = float(gain_raw) / float(total_distance)
+                            if gain > best_trade:
+                                best_trade = gain
+                                best_sell_id = sell_planet_id
+                                best_sell_res = sell_res_id
+
+                if best_trade:
+                    print(f"sending {ship_id} to {self.data.planets[best_sell_id].name}({best_sell_id})")
+                    self.commands[ship_id] = TradeCommand(target=best_sell_id, resource=best_sell_res, amount=-ship.resources[best_sell_res]["amount"])
             else:
-                random_planet_id = random.choice(list(self.data.planets.keys()))
-                random_planet = self.data.planets[random_planet_id]
+                best_trade = 0.
+                best_buy_id = ""
+                best_buy_res = ""
+                best_buy_amt = 0
 
-                buy_id = 0
-                buy_amt = 0
-                for res_id, resource in random_planet.resources.items():
-                    if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
-                        capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
-                        if resource.buy_price and resource.amount > 0 and resource.buy_price < average[res_id]:
-                            buy_id = res_id
-                            buy_amt = min(resource.amount, capacity)
-                            break
-                else:
-                    continue
+                for buy_planet_id, buy_planet in self.data.planets.items():
+                    for sell_planet_id, sell_planet in self.data.planets.items():
+                        for buy_res_id, buy_resource in buy_planet.resources.items():
+                            for sell_res_id, sell_resource in sell_planet.resources.items():
+                                if buy_res_id != sell_res_id:
+                                    continue
+                                if not buy_resource.buy_price:
+                                    continue
+                                if not sell_resource.sell_price:
+                                    continue
+                                if not buy_resource.amount:
+                                    continue
 
-                print(f"sending {ship_id} to {self.data.planets[random_planet_id].name}({random_planet_id})")
-                self.commands[ship_id] = TradeCommand(target=random_planet_id, resource=buy_id, amount=buy_amt)
+                                max_amt = min(buy_resource.amount, ship_capacity)
+                                gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
+                                total_distance = compute_distance(ship.position, buy_planet.position) + compute_distance(buy_planet.position, sell_planet.position)
+                                gain = float(gain_raw) / float(total_distance)
+                                if gain > best_trade:
+                                    best_trade = gain
+                                    best_buy_id = buy_planet_id
+                                    best_buy_res = buy_res_id
+                                    best_buy_amt = max_amt
+
+                if best_trade:
+                    print(f"sending {ship_id} to {self.data.planets[best_buy_id].name}({best_buy_id})")
+                    self.commands[ship_id] = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
 
     def attack(self):
         ...
