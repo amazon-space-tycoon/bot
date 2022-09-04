@@ -6,7 +6,7 @@ Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
- 
+
 Install the client
 ```bash
 cd space_tycoon_generated_client
@@ -22,3 +22,7 @@ Regenerate client code (docker is necessary)
 sudo ./client-gen.sh
 ```
 and then install the client again
+
+## Credentials
+* user: `amazon`
+* password: `uPKZwdyquzWf2wv`
