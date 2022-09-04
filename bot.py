@@ -177,6 +177,11 @@ class Game:
         if not my_shipyards:
             return
 
+        fighters_count = len([1 for ship in self.my_ships if ship.ship_class == "4" or ship.ship_class == "5"])
+        if fighters_count < 3:
+            self.commands[self.mothership] = ConstructCommand(ship_class="4")
+            return
+
         trading_ships_total = 0
         for ship in self.my_ships.values():
             if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
