@@ -98,6 +98,24 @@ class Game:
         currently_buying = {}
 
         for ship_id, ship in self.my_traders.items():
+            nearest_enemy_center = [[], []]
+            for enemy in self.other_ships.values():
+                if enemy.ship_class == "1" or enemy.ship_class == "4" or enemy.ship_class == "5":
+                    if compute_distance(enemy.position, ship.position) < 20:
+                        nearest_enemy_center[0] = enemy.position[0]
+                        nearest_enemy_center[1] = enemy.position[1]
+
+            if nearest_enemy_center[0]:
+                nearest_enemy_center[0] = int(sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0]))
+                nearest_enemy_center[1] = int(sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1]))
+
+                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
+                    ship.position[0] + (ship.position[0] - nearest_enemy_center[0]) * 100,
+                    ship.position[1] + (ship.position[1] - nearest_enemy_center[1]) * 100,
+                ]))
+
+                continue
+
             ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
 
             if len(ship.resources):
