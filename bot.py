@@ -104,8 +104,8 @@ class Game:
     def trade(self):
         currently_buying = {}
 
-        # enemy ship avoidance
         for ship_id, ship in self.my_traders.items():
+            # enemy ship avoidance
             # calculate nearest enemies average position
             nearest_enemy_center = [[], []]
             for enemy in self.other_ships.values():
