@@ -162,7 +162,10 @@ class Game:
                     cmd = TradeCommand(target=best_sell_id,
                                        resource=best_sell_res,
                                        amount=-ship.resources[best_sell_res]["amount"])
-                    if ship.command and ship.command == cmd:
+                    if ship.command and \
+                       ship.command.target == cmd.target and \
+                       ship.command.resource == cmd.resource and \
+                       ship.command.amount == cmd.amount:
                         continue
 
                     print(f"sending {ship_id} to {self.data.planets[best_sell_id].name}({best_sell_id})")
@@ -215,7 +218,10 @@ class Game:
                     currently_buying[currently_buying_key] += best_buy_amt
 
                     cmd = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
-                    if ship.command and ship.command == cmd:
+                    if ship.command and \
+                       ship.command.target == cmd.target and \
+                       ship.command.resource == cmd.resource and \
+                       ship.command.amount == cmd.amount:
                         continue
 
                     print(f"sending {ship_id} to {self.data.planets[best_buy_id].name}({best_buy_id})")
