@@ -99,7 +99,7 @@ class Game:
             nearest_enemy_center = [[], []]
             for enemy in self.other_ships.values():
                 if enemy.ship_class == "1" or enemy.ship_class == "4" or enemy.ship_class == "5":
-                    if compute_distance(enemy.position, ship.position) < 20:
+                    if compute_distance(enemy.position, ship.position) < 50:
                         nearest_enemy_center[0].append(enemy.position[0])
                         nearest_enemy_center[1].append(enemy.position[1])
 
@@ -209,12 +209,12 @@ class Game:
             if dist > my_furthest_ship_dist:
                 my_furthest_ship_dist = dist
 
-        defense_dist = my_furthest_ship_dist * 2.1
+        defense_dist = max(100, my_furthest_ship_dist * 2.1)
 
         for ship_id, ship in self.my_fighters.items():
             if self.closest_enemy_ship:
                 dist = compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center)
-                if dist < 10:
+                if dist < 20:
                     self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                 elif dist < defense_dist:
                     self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
@@ -231,7 +231,7 @@ class Game:
                 self.commands[self.mothership] = AttackCommand(target=self.closest_enemy_ship)
                 self.last_enemy_target = self.closest_enemy_ship
             # for enemy_id, enemy in self.other_ships.items():
-            #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
+            #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 20:
             #         self.commands[self.mothership] = AttackCommand(target=enemy_id)
             #         break
             else:
@@ -313,11 +313,11 @@ class Game:
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
             if self.last_enemy_target and enemy_id == self.last_enemy_target:
-                dist -= 10
+                dist -= 20
             elif enemy.ship_class == "1":
                 dist += 25
             elif enemy.ship_class == "2" or enemy.ship_class == "3":
-                dist += 50
+                dist += 100
 
             if dist < closest_enemy_ship_dist:
                 closest_enemy_ship_dist = dist
