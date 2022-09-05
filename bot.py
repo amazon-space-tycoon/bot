@@ -236,6 +236,7 @@ class Game:
         my_money = my_net_worth.money
         my_total = my_net_worth.total
 
+        # keep some money for trading
         extra = max(500000, (my_total - 10000000) // 5)
 
         fighters_count = len(self.my_fighters)
@@ -244,14 +245,28 @@ class Game:
 
         # we want more fighters!
         if fighters_count < want_fighters:
-            if my_money > self.static_data.ship_classes["4"].price + extra:  # keep some money for trading
-                self.commands[self.mothership] = ConstructCommand(ship_class="4")
+            if my_total > 15000000:
+                # bomber
+                buy_fighter = "5"
+            else:
+                # fighter
+                buy_fighter = "4"
+
+            if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
+                self.commands[self.mothership] = ConstructCommand(ship_class=buy_fighter)
             return
 
         # no fighters needed, buy more traders
-        if my_money > extra:  # keep some money for trading
+        if my_total > 10000000:
+            # hauler
+            buy_trader = "2"
+        else:
+            # shipper
+            buy_trader = "3"
+
+        if my_money > self.static_data.ship_classes[buy_trader].price + extra:
             random_shipyard = random.choice(list(self.my_shipyards.keys()))
-            self.commands[random_shipyard] = ConstructCommand(ship_class="3")
+            self.commands[random_shipyard] = ConstructCommand(ship_class=buy_trader)
 
     def calculate_center(self):
         center = [[], []]
