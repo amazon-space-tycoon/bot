@@ -219,7 +219,7 @@ class Game:
         if self.mothership:
             if self.closest_enemy_ship and \
                compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
-                self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+                self.commands[self.mothership] = AttackCommand(target=self.closest_enemy_ship)
             # for enemy_id, enemy in self.other_ships.items():
             #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
             #         self.commands[self.mothership] = AttackCommand(target=enemy_id)
@@ -252,12 +252,15 @@ class Game:
     def calculate_center(self):
         center = [[], []]
         for ship in self.my_ships.values():
-            if ship.ship_class != "1" and ship.ship_class != "2" and ship.ship_class != "3":
+            if ship.ship_class == "1" or ship.ship_class == "2" or ship.ship_class == "3":
                 # mothership, shipper or hauler
-                continue
+                center[0].append(ship.position[0])
+                center[1].append(ship.position[1])
 
-            center[0].append(ship.position[0])
-            center[1].append(ship.position[1])
+                if ship.ship_class == "1":
+                    # prefer centering mothership
+                    center[0].append(ship.position[0])
+                    center[1].append(ship.position[1])
 
         if center[0]:
             center[0] = int(sum(center[0]) / len(center[0]))
@@ -304,7 +307,7 @@ class Game:
             if self.center[0]:
                 dist = compute_distance(self.center, self.data.ships[self.closest_enemy_ship].position)
                 if dist != 0:
-                    self.center_dist_cost = 500 / dist
+                    self.center_dist_cost = 1000 / dist
                 else:
                     self.center_dist_cost = 1000
             else:
