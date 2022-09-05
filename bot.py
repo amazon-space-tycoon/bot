@@ -201,17 +201,20 @@ class Game:
 
     def attack(self):
         my_furthest_ship_dist = 0.
-        for ship_id, ship in self.my_ships.items():
+        for ship_id, ship in self.my_traders.items():
             dist = compute_distance(ship.position, self.center)
             if dist > my_furthest_ship_dist:
                 my_furthest_ship_dist = dist
 
-        defense_dist = my_furthest_ship_dist * 3
+        defense_dist = my_furthest_ship_dist * 2.1
 
         for ship_id, ship in self.my_fighters.items():
-            if self.closest_enemy_ship and \
-               compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
-                self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+            dist = compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center)
+            if self.closest_enemy_ship and dist < defense_dist:
+                if dist < 10:
+                    self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+                else:
+                    self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
             else:
                 if self.center[0]:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
@@ -270,16 +273,9 @@ class Game:
 
     def calculate_center(self):
         center = [[], []]
-        for ship in self.my_ships.values():
-            if ship.ship_class == "1" or ship.ship_class == "2" or ship.ship_class == "3":
-                # mothership, shipper or hauler
-                center[0].append(ship.position[0])
-                center[1].append(ship.position[1])
-
-                if ship.ship_class == "1":
-                    # prefer centering mothership
-                    center[0].append(ship.position[0])
-                    center[1].append(ship.position[1])
+        for ship in self.my_traders.values():
+            center[0].append(ship.position[0])
+            center[1].append(ship.position[1])
 
         if center[0]:
             center[0] = int(sum(center[0]) / len(center[0]))
