@@ -39,9 +39,6 @@ class ConfigException(Exception):
     pass
 
 
-center_dist_cost = 0.5
-
-
 class Game:
     def __init__(self, api_client: GameApi, config: Dict[str, str]):
         self.me: Optional[Player] = None
@@ -294,6 +291,18 @@ class Game:
 
         self.center = self.calculate_center()
         self.closest_enemy_ship = self.calculate_closest_enemy_ship()
+
+        if self.closest_enemy_ship:
+            if self.center[0]:
+                dist = compute_distance(self.center, self.data.ships[self.closest_enemy_ship].position)
+                if dist != 0:
+                    self.center_dist_cost = 500 / dist
+                else:
+                    self.center_dist_cost = 1000
+            else:
+                self.center_dist_cost = 1
+        else:
+            self.center_dist_cost = 0
 
         ship_type_cnt = Counter(
             (self.static_data.ship_classes[ship.ship_class].name for ship in self.my_ships.values()))
