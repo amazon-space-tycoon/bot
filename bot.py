@@ -236,11 +236,16 @@ class Game:
 
         fighters_count = len(self.my_fighters)
         traders_count = len(self.my_traders)
-        if fighters_count < traders_count // 3 + 2 and my_money > self.static_data.ship_classes["4"].price:
-            self.commands[self.mothership] = ConstructCommand(ship_class="4")
+        want_fighters = traders_count // 3 + 2
+
+        # we want more fighters!
+        if fighters_count < want_fighters:
+            if my_money > self.static_data.ship_classes["4"].price:
+                self.commands[self.mothership] = ConstructCommand(ship_class="4")
             return
 
-        if my_money - 2000000 > 0:
+        # no fighters needed, buy more traders
+        if my_money - 500000 > 0:  # keep some money for trading
             random_shipyard = random.choice(list(self.my_shipyards.keys()))
             self.commands[random_shipyard] = ConstructCommand(ship_class="3")
 
