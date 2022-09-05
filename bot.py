@@ -313,7 +313,7 @@ class Game:
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
             if self.last_enemy_target and enemy_id == self.last_enemy_target:
-                dist -= 20
+                dist -= 150
             elif enemy.ship_class == "1":
                 dist += 25
             elif enemy.ship_class == "2" or enemy.ship_class == "3":
