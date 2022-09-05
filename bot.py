@@ -38,6 +38,9 @@ class ConfigException(Exception):
     pass
 
 
+center_dist_cost = 0.5
+
+
 class Game:
     def __init__(self, api_client: GameApi, config: Dict[str, str]):
         self.me: Optional[Player] = None
@@ -103,7 +106,8 @@ class Game:
                                 continue
 
                             gain_raw = sell_resource.sell_price * ship_resource["amount"]
-                            total_distance = compute_distance(ship.position, sell_planet.position)
+                            total_distance = compute_distance(ship.position, sell_planet.position) + \
+                                (compute_distance(sell_planet.position, self.center) * center_dist_cost)
                             gain = float(gain_raw) / float(total_distance)
                             if gain > best_trade:
                                 best_trade = gain
@@ -145,7 +149,7 @@ class Game:
                                 gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
                                 total_distance = compute_distance(ship.position, buy_planet.position) + \
                                     compute_distance(buy_planet.position, sell_planet.position) + \
-                                    compute_distance(ship.position, self.center)
+                                    (compute_distance(buy_planet.position, self.center) * center_dist_cost)
                                 gain = float(gain_raw) / float(total_distance)
                                 if gain > best_trade:
                                     best_trade = gain
@@ -207,8 +211,11 @@ class Game:
         if not my_shipyards:
             return
 
+        my_money = self.data.players[self.player_id].net_worth.money
+
         fighters_count = len([1 for ship in self.my_ships.values() if ship.ship_class == "4" or ship.ship_class == "5"])
-        if fighters_count < 3:
+        traders_count = len([1 for ship in self.my_ships.values() if ship.ship_class == "2" or ship.ship_class == "3"])
+        if fighters_count < traders_count // 3 + 2 and my_money > self.static_data.ship_classes["4"].price:
             self.commands[self.mothership] = ConstructCommand(ship_class="4")
             return
 
@@ -216,14 +223,15 @@ class Game:
         for ship in self.my_ships.values():
             if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
                 trading_ships_total += self.static_data.ship_classes[ship.ship_class].price
-        if trading_ships_total < (self.data.players[self.player_id].net_worth.money // 3):
+        if my_money - 2000000 > 0:
             random_shipyard = random.choice(list(my_shipyards.keys()))
             self.commands[random_shipyard] = ConstructCommand(ship_class="3")
 
     def calculate_center(self):
         center = [[], []]
         for ship in self.my_ships.values():
-            if ship.ship_class != "2" and ship.ship_class != "3":  # shipper or hauler
+            if ship.ship_class != "1" and ship.ship_class != "2" and ship.ship_class != "3":
+                # mothership, shipper or hauler
                 continue
 
             center[0].append(ship.position[0])
@@ -255,9 +263,9 @@ class Game:
 
         self.commands = {}
 
-        self.buy_ships()
         self.trade()
         self.attack()
+        self.buy_ships()
 
         pprint(self.commands) if self.commands else None
         try:
