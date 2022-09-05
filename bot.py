@@ -218,6 +218,9 @@ class Game:
                     self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                 elif dist < defense_dist:
                     self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
+                else:
+                    if self.center[0]:
+                        self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
             else:
                 if self.center[0]:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
