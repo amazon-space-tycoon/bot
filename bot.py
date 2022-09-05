@@ -39,6 +39,14 @@ class ConfigException(Exception):
     pass
 
 
+def normalize_vec(vec):
+    ln = math.sqrt(vec[0]**2 + vec[1]**2)
+    if ln != 0:
+        vec[0] /= ln
+        vec[1] /= ln
+    return vec
+
+
 class Game:
     def __init__(self, api_client: GameApi, config: Dict[str, str]):
         self.me: Optional[Player] = None
@@ -53,7 +61,7 @@ class Game:
 
         self.planet_neighbors = {planet_id: [(neigh_id, neigh)
                                              for neigh_id, neigh in self.data.planets.items()
-                                             if compute_distance(planet.position, neigh.position) < 500]
+                                             if compute_distance(planet.position, neigh.position) < 300]
                                  for planet_id, planet in self.data.planets.items()}
         self.last_enemy_target = None
 
@@ -104,12 +112,20 @@ class Game:
                         nearest_enemy_center[1].append(enemy.position[1])
 
             if nearest_enemy_center[0]:
-                nearest_enemy_center[0] = int(sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0]))
-                nearest_enemy_center[1] = int(sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1]))
+                nearest_enemy_center[0] = sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0])
+                nearest_enemy_center[1] = sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1])
+
+                avoid_vec = normalize_vec([ship.position[0] - nearest_enemy_center[0],
+                                           ship.position[1] - nearest_enemy_center[1]])
+                if self.center[0]:
+                    center_vec = normalize_vec([self.center[0] - ship.position[0],
+                                                self.center[1] - ship.position[1]])
+                    avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0],
+                                               avoid_vec[1] + center_vec[1]])
 
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
-                    ship.position[0] + (ship.position[0] - nearest_enemy_center[0]) * 100,
-                    ship.position[1] + (ship.position[1] - nearest_enemy_center[1]) * 100,
+                    int(ship.position[0] + avoid_vec[0] * 100),
+                    int(ship.position[1] + avoid_vec[1] * 100),
                 ]))
 
                 continue
@@ -133,6 +149,9 @@ class Game:
                             total_distance = compute_distance(ship.position, sell_planet.position)
                             if self.mothership:
                                 total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                            elif self.center[0]:
+                                total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
+
                             gain = float(gain_raw) / float(total_distance) if total_distance != 0 else gain_raw * 1000.
                             if gain > best_trade:
                                 best_trade = gain
@@ -156,9 +175,6 @@ class Game:
 
                 for buy_planet_id, buy_planet in self.data.planets.items():
                     for sell_planet_id, sell_planet in self.planet_neighbors[buy_planet_id]:
-                        if compute_distance(buy_planet.position, sell_planet.position) > 250:
-                            continue
-
                         for buy_res_id, buy_resource in buy_planet.resources.items():
                             for sell_res_id, sell_resource in sell_planet.resources.items():
                                 if buy_res_id != sell_res_id:
@@ -179,6 +195,11 @@ class Game:
                                     compute_distance(buy_planet.position, sell_planet.position)
                                 if self.mothership:
                                     total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                                    total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                                elif self.center[0]:
+                                    total_distance += compute_distance(buy_planet.position, self.center) * self.center_dist_cost
+                                    total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
+
                                 gain = float(gain_raw) / float(total_distance)
                                 if gain > best_trade:
                                     best_trade = gain
