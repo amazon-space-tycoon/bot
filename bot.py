@@ -237,6 +237,8 @@ class Game:
         if center[0]:
             center[0] = int(sum(center[0]) / len(center[0]))
             center[1] = int(sum(center[1]) / len(center[1]))
+        else:
+            center = [0, 0]
 
         return center
 
