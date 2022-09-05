@@ -107,7 +107,7 @@ class Game:
             nearest_enemy_center = [[], []]
             for enemy in self.other_ships.values():
                 if enemy.ship_class == "1" or enemy.ship_class == "4" or enemy.ship_class == "5":
-                    if compute_distance(enemy.position, ship.position) < 50:
+                    if compute_distance(enemy.position, ship.position) < 75:
                         nearest_enemy_center[0].append(enemy.position[0])
                         nearest_enemy_center[1].append(enemy.position[1])
 
@@ -120,8 +120,13 @@ class Game:
                 if self.center[0]:
                     center_vec = normalize_vec([self.center[0] - ship.position[0],
                                                 self.center[1] - ship.position[1]])
-                    avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0],
-                                               avoid_vec[1] + center_vec[1]])
+                    avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0] * 0.5,
+                                               avoid_vec[1] + center_vec[1] * 0.5])
+
+                map_center_vec = normalize_vec([-ship.position[0],
+                                                -ship.position[1]])
+                avoid_vec = normalize_vec([avoid_vec[0] + map_center_vec[0] * 0.3,
+                                           avoid_vec[1] + map_center_vec[1] * 0.3])
 
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
                     int(ship.position[0] + avoid_vec[0] * 100),
