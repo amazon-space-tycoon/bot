@@ -130,7 +130,7 @@ class Game:
 
                             gain_raw = sell_resource.sell_price * ship_resource["amount"]
                             total_distance = compute_distance(ship.position, sell_planet.position) + \
-                                (compute_distance(sell_planet.position, self.center) * center_dist_cost)
+                                (compute_distance(sell_planet.position, self.center) * self.center_dist_cost)
                             gain = float(gain_raw) / float(total_distance)
                             if gain > best_trade:
                                 best_trade = gain
@@ -168,11 +168,14 @@ class Game:
                                 if not buy_resource.amount:
                                     continue
 
-                                max_amt = min(buy_resource.amount - currently_buying.get((buy_planet_id, buy_res_id), 0), ship_capacity)
+                                max_amt = min(buy_resource.amount - currently_buying.get((
+                                    buy_planet_id,
+                                    buy_res_id
+                                ), 0), ship_capacity)
                                 gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
                                 total_distance = compute_distance(ship.position, buy_planet.position) + \
                                     compute_distance(buy_planet.position, sell_planet.position) + \
-                                    (compute_distance(buy_planet.position, self.center) * center_dist_cost)
+                                    (compute_distance(buy_planet.position, self.center) * self.center_dist_cost)
                                 gain = float(gain_raw) / float(total_distance)
                                 if gain > best_trade:
                                     best_trade = gain
