@@ -241,7 +241,7 @@ class Game:
             if dist > my_furthest_ship_dist:
                 my_furthest_ship_dist = dist
 
-        defense_dist = max(100, my_furthest_ship_dist * 2.1)
+        defense_dist = max(100, my_furthest_ship_dist * 2.5)
 
         if self.mothership:
             if self.closest_enemy_ship and \
@@ -290,19 +290,20 @@ class Game:
         # keep some money for trading
         extra = max(500000, (my_total - 10000000) // 5)
 
-        fighters_count = len(self.my_fighters)
+        fighters_count = sum(1 for ship in self.my_fighters if ship.ship_class == "4")
+        bombers_count = sum(1 for ship in self.my_fighters if ship.ship_class == "5")
         traders_count = len(self.my_traders)
-        want_fighters = traders_count // 3 + 2
+        want_fighters = traders_count // 4 - 1
+        want_bombers = traders_count // 5 + 1
+
+        buy_fighter = None
+        if bombers_count < want_bombers:
+            buy_fighter = "5"
+        elif fighters_count < want_fighters:
+            buy_fighter = "4"
 
         # we want more fighters!
-        if fighters_count < want_fighters:
-            if my_total > 15000000:
-                # bomber
-                buy_fighter = "5"
-            else:
-                # fighter
-                buy_fighter = "4"
-
+        if buy_fighter:
             if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
                 shipyard = None
                 if self.mothership:
