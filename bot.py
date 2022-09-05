@@ -117,7 +117,13 @@ class Game:
 
                 avoid_vec = normalize_vec([ship.position[0] - nearest_enemy_center[0],
                                            ship.position[1] - nearest_enemy_center[1]])
-                if self.center[0]:
+                if self.mothership:
+                    mothership = self.data.ships[self.mothership]
+                    mothership_vec = normalize_vec([mothership.position[0] - ship.position[0],
+                                                    mothership.position[1] - ship.position[1]])
+                    avoid_vec = normalize_vec([avoid_vec[0] + mothership_vec[0] * 0.5,
+                                               avoid_vec[1] + mothership_vec[1] * 0.5])
+                elif self.center[0]:
                     center_vec = normalize_vec([self.center[0] - ship.position[0],
                                                 self.center[1] - ship.position[1]])
                     if self.my_fighters or self.mothership:
@@ -158,7 +164,7 @@ class Game:
                             total_distance = compute_distance(ship.position, sell_planet.position)
                             if self.mothership:
                                 total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
-                            elif self.center[0]:
+                            elif self.my_fighters and self.center[0]:
                                 total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
 
                             gain = float(gain_raw) / float(total_distance) if total_distance != 0 else gain_raw * 1000.
@@ -208,7 +214,7 @@ class Game:
                                 if self.mothership:
                                     total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
                                     total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
-                                elif self.center[0]:
+                                elif self.my_fighters and self.center[0]:
                                     total_distance += compute_distance(buy_planet.position, self.center) * self.center_dist_cost
                                     total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
 
