@@ -288,7 +288,10 @@ class Game:
         my_total = my_net_worth.total
 
         # keep some money for trading
-        extra = max(500000, (my_total - 10000000) // 5)
+        if len(self.other_ships):
+            extra = max(500000, (my_total - 10000000) // 5)
+        else:
+            extra = len(self.my_traders) * 10000
 
         if len(self.other_ships):
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
