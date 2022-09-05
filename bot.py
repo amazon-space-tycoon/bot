@@ -206,7 +206,7 @@ class Game:
             if dist > my_furthest_ship_dist:
                 my_furthest_ship_dist = dist
 
-        defense_dist = my_furthest_ship_dist * 2.2
+        defense_dist = my_furthest_ship_dist * 3
 
         for ship_id, ship in self.my_fighters.items():
             if self.closest_enemy_ship and \
@@ -240,12 +240,12 @@ class Game:
 
         # we want more fighters!
         if fighters_count < want_fighters:
-            if my_money > self.static_data.ship_classes["4"].price:
+            if my_money > self.static_data.ship_classes["4"].price + 500000:  # keep some money for trading
                 self.commands[self.mothership] = ConstructCommand(ship_class="4")
             return
 
         # no fighters needed, buy more traders
-        if my_money - 500000 > 0:  # keep some money for trading
+        if my_money > 500000:  # keep some money for trading
             random_shipyard = random.choice(list(self.my_shipyards.keys()))
             self.commands[random_shipyard] = ConstructCommand(ship_class="3")
 
