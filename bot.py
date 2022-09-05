@@ -55,6 +55,7 @@ class Game:
                                              for neigh_id, neigh in self.data.planets.items()
                                              if compute_distance(planet.position, neigh.position) < 500]
                                  for planet_id, planet in self.data.planets.items()}
+        self.last_enemy_target = None
 
         if self.player_id not in self.data.players:
             raise Exception("Logged as non-existent player")
@@ -225,6 +226,7 @@ class Game:
             if self.closest_enemy_ship and \
                compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
                 self.commands[self.mothership] = AttackCommand(target=self.closest_enemy_ship)
+                self.last_enemy_target = self.closest_enemy_ship
             # for enemy_id, enemy in self.other_ships.items():
             #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
             #         self.commands[self.mothership] = AttackCommand(target=enemy_id)
@@ -232,6 +234,7 @@ class Game:
             else:
                 if self.center[0]:
                     self.commands[self.mothership] = MoveCommand(destination=Destination(coordinates=self.center))
+                self.last_enemy_target = None
 
     def buy_ships(self):
         if not self.my_shipyards:
@@ -306,7 +309,9 @@ class Game:
 
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
-            if enemy.ship_class == "1":
+            if self.last_enemy_target and enemy_id == self.last_enemy_target:
+                dist *= 0.9
+            elif enemy.ship_class == "1":
                 dist *= 1.1
             elif enemy.ship_class == "2" or enemy.ship_class == "3":
                 dist *= 1.2
