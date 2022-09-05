@@ -104,7 +104,9 @@ class Game:
     def trade(self):
         currently_buying = {}
 
+        # enemy ship avoidance
         for ship_id, ship in self.my_traders.items():
+            # calculate nearest enemies average position
             nearest_enemy_center = [[], []]
             for enemy in self.other_ships.values():
                 if enemy.ship_class == "1" or enemy.ship_class == "4" or enemy.ship_class == "5":
@@ -112,31 +114,39 @@ class Game:
                         nearest_enemy_center[0].append(enemy.position[0])
                         nearest_enemy_center[1].append(enemy.position[1])
 
+            # if there are enemies nearby
             if nearest_enemy_center[0]:
                 nearest_enemy_center[0] = sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0])
                 nearest_enemy_center[1] = sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1])
 
+                # run away from their average position
                 avoid_vec = normalize_vec([ship.position[0] - nearest_enemy_center[0],
                                            ship.position[1] - nearest_enemy_center[1]])
+                # if we have a mothership, steer towards it for defense
                 if self.mothership:
                     mothership = self.data.ships[self.mothership]
                     mothership_vec = normalize_vec([mothership.position[0] - ship.position[0],
                                                     mothership.position[1] - ship.position[1]])
                     avoid_vec = normalize_vec([avoid_vec[0] + mothership_vec[0] * 0.5,
                                                avoid_vec[1] + mothership_vec[1] * 0.5])
+                # if not, steer using our traders average position
                 elif self.center[0]:
                     center_vec = normalize_vec([self.center[0] - ship.position[0],
                                                 self.center[1] - ship.position[1]])
-                    if self.my_fighters or self.mothership:
+                    # if we have defense in our average position, steer towards it
+                    if self.my_fighters_and_mothership:
                         avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0] * 0.5,
                                                    avoid_vec[1] + center_vec[1] * 0.5])
+                    # otherwise steer away from others
                     else:
                         avoid_vec = normalize_vec([avoid_vec[0] - center_vec[0] * 0.5,
                                                    avoid_vec[1] - center_vec[1] * 0.5])
 
+                # if we have defense, also steer slightly towards the center of the galaxy
                 if self.my_fighters_and_mothership:
                     map_center_vec = normalize_vec([-ship.position[0],
                                                     -ship.position[1]])
+                # otherwise lead enemy ships outside of the galaxy
                 else:
                     map_center_vec = normalize_vec([ship.position[0],
                                                     ship.position[1]])
@@ -144,6 +154,7 @@ class Game:
                 avoid_vec = normalize_vec([avoid_vec[0] + map_center_vec[0] * 0.3,
                                            avoid_vec[1] + map_center_vec[1] * 0.3])
 
+                # run away!
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
                     int(ship.position[0] + avoid_vec[0] * 100),
                     int(ship.position[1] + avoid_vec[1] * 100),
@@ -153,6 +164,7 @@ class Game:
 
             ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
 
+            # we have resources that we can sell
             if len(ship.resources):
                 best_trade = 0.
                 best_sell_id = ""
@@ -168,8 +180,10 @@ class Game:
 
                             gain_raw = sell_resource.sell_price * ship_resource["amount"]
                             total_distance = compute_distance(ship.position, sell_planet.position)
+                            # if we have a mothership, try to keep close
                             if self.mothership:
                                 total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                            # if not, but we have other fighters, try to keep close as well
                             elif self.my_fighters and self.center[0]:
                                 total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
 
@@ -183,6 +197,7 @@ class Game:
                     cmd = TradeCommand(target=best_sell_id,
                                        resource=best_sell_res,
                                        amount=-ship.resources[best_sell_res]["amount"])
+                    # don't resend the same command
                     if ship.command and \
                        ship.command.type == "trade" and \
                        ship.command.target == cmd.target and \
@@ -192,6 +207,7 @@ class Game:
 
                     print(f"sending {ship_id} to {self.data.planets[best_sell_id].name}({best_sell_id})")
                     self.commands[ship_id] = cmd
+            # we are looking for resources to buy
             else:
                 best_trade = 0.
                 best_buy_id = ""
@@ -218,9 +234,11 @@ class Game:
                                 gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
                                 total_distance = compute_distance(ship.position, buy_planet.position) + \
                                     compute_distance(buy_planet.position, sell_planet.position)
+                                # if we have a mothership, try to keep close
                                 if self.mothership:
                                     total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
                                     total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                                # if not, but we have other fighters, try to keep close as well
                                 elif self.my_fighters and self.center[0]:
                                     total_distance += compute_distance(buy_planet.position, self.center) * self.center_dist_cost
                                     total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
@@ -240,6 +258,7 @@ class Game:
                     currently_buying[currently_buying_key] += best_buy_amt
 
                     cmd = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
+                    # don't resend the same command
                     if ship.command and \
                        ship.command.type == "trade" and \
                        ship.command.target == cmd.target and \
@@ -253,13 +272,18 @@ class Game:
                                                           amount=best_buy_amt)
 
     def attack_or_defend_with(self, ship_id, ship, defense_dist):
+        # we are currently fighting a ship, attack it if it's close
         if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
            compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
             self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
+        # if not, let's look at the closest enemy ship
         elif self.closest_enemy_ship:
             closest_enemy_ship = self.data.ships[self.closest_enemy_ship]
             dist_center = compute_distance(closest_enemy_ship.position, self.center)
             dist_ship = compute_distance(closest_enemy_ship.position, ship.position)
+            # attack it if it's close to our ship already or if it's close to our defense ring and
+            # we either don't have a mothership, this is a normal ship and the nearby enemy is a trader
+            # or if this is a mothership and the nearby ship is not a trader
             if dist_ship < 20 or (
                 dist_center < defense_dist and ((
                     not self.mothership
@@ -274,22 +298,30 @@ class Game:
                         closest_enemy_ship.ship_class != "3"
                     )))):
                 self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+                # if this is a mothership, save the enemy ship as our target
                 if self.mothership and ship_id == self.mothership:
                     self.last_enemy_target = self.closest_enemy_ship
+            # if this is not a mothership, but we have one and an enemy is within our defense ring
+            # follow the mothership
             elif self.mothership and ship_id != self.mothership and dist_center < defense_dist:
                 self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
+            # otherwise, try to keep in the middle of our traders
             else:
                 if self.center[0]:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+                # if this is a mothership, reset our target
                 if self.mothership and ship_id == self.mothership:
                     self.last_enemy_target = None
+        # there is no closest enemy ship
         else:
             if self.center[0]:
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+            # if this is a mothership, reset our target
             if self.mothership and ship_id == self.mothership:
                 self.last_enemy_target = None
 
     def attack(self):
+        # find our furthest ship and calculate our defense ring
         my_furthest_ship_dist = 0.
         for ship_id, ship in self.my_traders.items():
             dist = compute_distance(ship.position, self.center)
@@ -298,21 +330,29 @@ class Game:
 
         defense_dist = max(150, my_furthest_ship_dist * 2.5)
 
+        # and attack (or defend)
         for ship_id, ship in self.my_fighters_and_mothership.items():
             self.attack_or_defend_with(ship_id, ship, defense_dist)
 
     def buy_ships(self):
+        # nowhere to buy ships from
         if not self.my_shipyards:
             return
+        # we are currently fighting someone
+        if self.last_enemy_target:
+            return
 
+        # if there are still some enemy ships, buy fighters
         if len(self.other_ships):
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             bombers_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "5")
             traders_count = len(self.my_traders)
+            # magic
             want_fighters = traders_count // 4 - 1
             want_bombers = traders_count // 5 + 1
 
             buy_fighter = None
+            # prefer bombers
             if bombers_count < want_bombers:
                 buy_fighter = "5"
             elif fighters_count < want_fighters:
@@ -322,6 +362,7 @@ class Game:
             if buy_fighter:
                 if self.my_money >= self.static_data.ship_classes[buy_fighter].price + self.extra_money:
                     shipyard = None
+                    # prefer buying from the mothership
                     if self.mothership:
                         shipyard = self.mothership
                     elif self.my_shipyards:
@@ -341,6 +382,7 @@ class Game:
 
         if self.my_money >= self.static_data.ship_classes[buy_trader].price + self.extra_money:
             shipyard = None
+            # prefer buying from the mothership
             if self.mothership:
                 shipyard = self.mothership
             elif self.my_shipyards:
@@ -351,11 +393,13 @@ class Game:
 
     def repair(self):
         for ship_id, ship in self.my_fighters_and_mothership.items():
+            # if we are currently attacking, we have enough money for a repair and enough life lost, then repair
             if ship_id in self.commands and self.commands[ship_id].type == "attack":
                 ship_class = self.static_data.ship_classes[ship.ship_class]
                 if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
                     self.commands[ship_id] = RepairCommand()
 
+        # also repair escaping traders if we have enough others to cover the loss
         if not self.my_fighters_and_mothership and len(self.my_traders) >= 5:
             for ship_id, ship in self.my_traders.items():
                 if ship_id in self.commands and self.commands[ship_id].type == "move":
@@ -397,8 +441,9 @@ class Game:
         return closest_enemy_ship
 
     def game_logic(self):
-        # todo throw all this away
         self.recreate_me()
+
+        # precalculate some things
         self.my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                      self.data.ships.items() if ship.player == self.player_id}
         self.other_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
@@ -426,8 +471,9 @@ class Game:
         self.my_money = my_net_worth.money
         self.my_total = my_net_worth.total
 
-        # keep some money for trading
+        # keep some money for trading and repairs
         if len(self.other_ships):
+            # TODO maybe look at other players' money and try to have more
             self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
         else:
             self.extra_money = len(self.my_traders) * 20000
@@ -453,8 +499,8 @@ class Game:
         self.commands = {}
 
         self.trade()
-        self.buy_ships()
         self.attack()
+        self.buy_ships()
         self.repair()
 
         pprint(self.commands) if self.commands else None
