@@ -290,30 +290,31 @@ class Game:
         # keep some money for trading
         extra = max(500000, (my_total - 10000000) // 5)
 
-        fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
-        bombers_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "5")
-        traders_count = len(self.my_traders)
-        want_fighters = traders_count // 4 - 1
-        want_bombers = traders_count // 5 + 1
+        if len(self.other_ships):
+            fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
+            bombers_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "5")
+            traders_count = len(self.my_traders)
+            want_fighters = traders_count // 4 - 1
+            want_bombers = traders_count // 5 + 1
 
-        buy_fighter = None
-        if bombers_count < want_bombers:
-            buy_fighter = "5"
-        elif fighters_count < want_fighters:
-            buy_fighter = "4"
+            buy_fighter = None
+            if bombers_count < want_bombers:
+                buy_fighter = "5"
+            elif fighters_count < want_fighters:
+                buy_fighter = "4"
 
-        # we want more fighters!
-        if buy_fighter:
-            if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
-                shipyard = None
-                if self.mothership:
-                    shipyard = self.mothership
-                elif self.my_shipyards:
-                    shipyard = random.choice(list(self.my_shipyards.keys()))
+            # we want more fighters!
+            if buy_fighter:
+                if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
+                    shipyard = None
+                    if self.mothership:
+                        shipyard = self.mothership
+                    elif self.my_shipyards:
+                        shipyard = random.choice(list(self.my_shipyards.keys()))
 
-                if shipyard:
-                    self.commands[shipyard] = ConstructCommand(ship_class=buy_fighter)
-            return
+                    if shipyard:
+                        self.commands[shipyard] = ConstructCommand(ship_class=buy_fighter)
+                return
 
         # no fighters needed, buy more traders
         if my_total > 8000000:
