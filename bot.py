@@ -290,8 +290,8 @@ class Game:
         # keep some money for trading
         extra = max(500000, (my_total - 10000000) // 5)
 
-        fighters_count = sum(1 for ship in self.my_fighters if ship.ship_class == "4")
-        bombers_count = sum(1 for ship in self.my_fighters if ship.ship_class == "5")
+        fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
+        bombers_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "5")
         traders_count = len(self.my_traders)
         want_fighters = traders_count // 4 - 1
         want_bombers = traders_count // 5 + 1
