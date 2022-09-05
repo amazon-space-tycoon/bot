@@ -179,6 +179,7 @@ class Game:
                                        resource=best_sell_res,
                                        amount=-ship.resources[best_sell_res]["amount"])
                     if ship.command and \
+                       ship.command.type == "trade" and \
                        ship.command.target == cmd.target and \
                        ship.command.resource == cmd.resource and \
                        ship.command.amount == cmd.amount:
@@ -235,6 +236,7 @@ class Game:
 
                     cmd = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
                     if ship.command and \
+                       ship.command.type == "trade" and \
                        ship.command.target == cmd.target and \
                        ship.command.resource == cmd.resource and \
                        ship.command.amount == cmd.amount:
@@ -344,9 +346,10 @@ class Game:
 
     def repair(self):
         for ship_id, ship in self.my_fighters_and_mothership.items():
-            ship_class = self.static_data.ship_classes[ship.ship_class]
-            if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
-                self.commands[ship_id] = RepairCommand()
+            if ship_id in self.commands and self.commands[ship_id].type == "attack":
+                ship_class = self.static_data.ship_classes[ship.ship_class]
+                if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
+                    self.commands[ship_id] = RepairCommand()
 
     def calculate_center(self):
         center = [[], []]
@@ -438,8 +441,8 @@ class Game:
         self.commands = {}
 
         self.trade()
-        self.attack()
         self.buy_ships()
+        self.attack()
         self.repair()
 
         pprint(self.commands) if self.commands else None
