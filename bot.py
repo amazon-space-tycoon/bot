@@ -345,8 +345,7 @@ class Game:
     def repair(self):
         for ship_id, ship in self.my_fighters_and_mothership.items():
             ship_class = self.static_data.ship_classes[ship.ship_class]
-            if ship.life <= ship_class.life - ship_class.repair_life and \
-               self.my_money >= ship_class.repair_price + self.extra_money:
+            if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
                 self.commands[ship_id] = RepairCommand()
 
     def calculate_center(self):
