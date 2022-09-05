@@ -211,17 +211,19 @@ class Game:
         for ship_id, ship in self.my_fighters.items():
             if self.closest_enemy_ship and \
                compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
-
                 self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
             else:
                 if self.center[0]:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
 
         if self.mothership:
-            for enemy_id, enemy in self.other_ships.items():
-                if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
-                    self.commands[self.mothership] = AttackCommand(target=enemy_id)
-                    break
+            if self.closest_enemy_ship and \
+               compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
+                self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+            # for enemy_id, enemy in self.other_ships.items():
+            #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
+            #         self.commands[self.mothership] = AttackCommand(target=enemy_id)
+            #         break
             else:
                 if self.center[0]:
                     self.commands[self.mothership] = MoveCommand(destination=Destination(coordinates=self.center))
