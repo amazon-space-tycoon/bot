@@ -234,6 +234,43 @@ class Game:
                                                           resource=best_buy_res,
                                                           amount=best_buy_amt)
 
+    def attack_or_defend_with(self, ship_id, ship, defense_dist):
+        if self.last_enemy_target and \
+           compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
+            self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
+        elif self.closest_enemy_ship:
+            closest_enemy_ship = self.data.ships[self.closest_enemy_ship]
+            dist_center = compute_distance(closest_enemy_ship.position, self.center)
+            dist_ship = compute_distance(closest_enemy_ship.position, ship.position)
+            if dist_ship < 20 or (
+                dist_center < defense_dist and ((
+                    not self.mothership
+                ) or (
+                    ship_id != self.mothership and (
+                        closest_enemy_ship.ship_class == "2" or
+                        closest_enemy_ship.ship_class == "3"
+                    )
+                ) or (
+                    ship_id == self.mothership and (
+                        closest_enemy_ship.ship_class != "2" and
+                        closest_enemy_ship.ship_class != "3"
+                    )))):
+                self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+                if self.mothership and ship_id == self.mothership:
+                    self.last_enemy_target = self.closest_enemy_ship
+            elif self.mothership and ship_id != self.mothership and dist_center < defense_dist:
+                self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
+            else:
+                if self.center[0]:
+                    self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+                if self.mothership and ship_id == self.mothership:
+                    self.last_enemy_target = None
+        else:
+            if self.center[0]:
+                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+            if self.mothership and ship_id == self.mothership:
+                self.last_enemy_target = None
+
     def attack(self):
         my_furthest_ship_dist = 0.
         for ship_id, ship in self.my_traders.items():
@@ -244,40 +281,10 @@ class Game:
         defense_dist = max(100, my_furthest_ship_dist * 2.5)
 
         if self.mothership:
-            if self.closest_enemy_ship and \
-               compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
-                self.commands[self.mothership] = AttackCommand(target=self.closest_enemy_ship)
-                self.last_enemy_target = self.closest_enemy_ship
-            # for enemy_id, enemy in self.other_ships.items():
-            #     if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 20:
-            #         self.commands[self.mothership] = AttackCommand(target=enemy_id)
-            #         break
-            else:
-                if self.center[0]:
-                    self.commands[self.mothership] = MoveCommand(destination=Destination(coordinates=self.center))
-                self.last_enemy_target = None
+            self.attack_or_defend_with(self.mothership, self.data.ships[self.mothership], defense_dist)
 
         for ship_id, ship in self.my_fighters.items():
-            if self.last_enemy_target and \
-               compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
-                self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
-            elif self.closest_enemy_ship:
-                closest_enemy_ship = self.data.ships[self.closest_enemy_ship]
-                dist_center = compute_distance(closest_enemy_ship.position, self.center)
-                dist_ship = compute_distance(closest_enemy_ship.position, ship.position)
-                if dist_ship < 20 or (
-                   dist_center < defense_dist and (not self.mothership or
-                                                   closest_enemy_ship.ship_class == "2" or
-                                                   closest_enemy_ship.ship_class == "3")):
-                    self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
-                elif dist < defense_dist and self.mothership:
-                    self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
-                else:
-                    if self.center[0]:
-                        self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
-            else:
-                if self.center[0]:
-                    self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+            self.attack_or_defend_with(ship_id, ship, defense_dist)
 
     def buy_ships(self):
         if not self.my_shipyards:
@@ -291,7 +298,7 @@ class Game:
         if len(self.other_ships):
             extra = max(500000, (my_total - 10000000) // 5)
         else:
-            extra = len(self.my_traders) * 10000
+            extra = len(self.my_traders) * 20000
 
         if len(self.other_ships):
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
@@ -358,7 +365,7 @@ class Game:
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
             if self.last_enemy_target and enemy_id == self.last_enemy_target:
-                dist -= 150
+                dist -= 25
             elif enemy.ship_class == "1":
                 dist += 25
             elif enemy.ship_class == "2" or enemy.ship_class == "3":
