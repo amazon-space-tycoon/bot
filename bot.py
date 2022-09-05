@@ -313,11 +313,11 @@ class Game:
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
             if self.last_enemy_target and enemy_id == self.last_enemy_target:
-                dist *= 0.9
+                dist -= 10
             elif enemy.ship_class == "1":
-                dist *= 1.1
+                dist += 25
             elif enemy.ship_class == "2" or enemy.ship_class == "3":
-                dist *= 1.2
+                dist += 50
 
             if dist < closest_enemy_ship_dist:
                 closest_enemy_ship_dist = dist
