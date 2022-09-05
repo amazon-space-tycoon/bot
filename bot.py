@@ -245,7 +245,7 @@ class Game:
                                                           amount=best_buy_amt)
 
     def attack_or_defend_with(self, ship_id, ship, defense_dist):
-        if self.last_enemy_target and \
+        if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
            compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
             self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
         elif self.closest_enemy_ship:
