@@ -289,7 +289,7 @@ class Game:
             if dist > my_furthest_ship_dist:
                 my_furthest_ship_dist = dist
 
-        defense_dist = max(100, my_furthest_ship_dist * 2.5)
+        defense_dist = max(150, my_furthest_ship_dist * 2.5)
 
         for ship_id, ship in self.my_fighters_and_mothership.items():
             self.attack_or_defend_with(ship_id, ship, defense_dist)
@@ -441,6 +441,7 @@ class Game:
         self.trade()
         self.attack()
         self.buy_ships()
+        self.repair()
 
         pprint(self.commands) if self.commands else None
         try:
