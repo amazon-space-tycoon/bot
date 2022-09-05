@@ -211,11 +211,11 @@ class Game:
         defense_dist = my_furthest_ship_dist * 2.1
 
         for ship_id, ship in self.my_fighters.items():
-            dist = compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center)
-            if self.closest_enemy_ship and dist < defense_dist:
+            if self.closest_enemy_ship:
+                dist = compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center)
                 if dist < 10:
                     self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
-                else:
+                elif dist < defense_dist:
                     self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
             else:
                 if self.center[0]:
