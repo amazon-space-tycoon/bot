@@ -131,7 +131,7 @@ class Game:
                             gain_raw = sell_resource.sell_price * ship_resource["amount"]
                             total_distance = compute_distance(ship.position, sell_planet.position) + \
                                 (compute_distance(sell_planet.position, self.center) * self.center_dist_cost)
-                            gain = float(gain_raw) / float(total_distance)
+                            gain = float(gain_raw) / float(total_distance) if total_distance != 0 else gain_raw * 1000.
                             if gain > best_trade:
                                 best_trade = gain
                                 best_sell_id = sell_planet_id
