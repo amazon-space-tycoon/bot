@@ -421,7 +421,7 @@ class Game:
 
         # keep some money for trading
         if len(self.other_ships):
-            self.extra_money = max(500000, (self.my_total - 10000000) // 5)
+            self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
         else:
             self.extra_money = len(self.my_traders) * 20000
 
