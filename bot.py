@@ -53,6 +53,12 @@ class Game:
         self.season = self.data.current_tick.season
         self.tick = self.data.current_tick.tick
         # this part is custom logic, feel free to edit / delete
+
+        self.planet_neighbors = {planet_id: [(neigh_id, neigh)
+                                             for neigh_id, neigh in self.data.planets.items()
+                                             if compute_distance(planet.position, neigh.position) < 500]
+                                 for planet_id, planet in self.data.planets.items()}
+
         if self.player_id not in self.data.players:
             raise Exception("Logged as non-existent player")
         self.recreate_me()
@@ -132,7 +138,7 @@ class Game:
                 best_buy_amt = 0
 
                 for buy_planet_id, buy_planet in self.data.planets.items():
-                    for sell_planet_id, sell_planet in self.data.planets.items():
+                    for sell_planet_id, sell_planet in self.planet_neighbors[buy_planet_id]:
                         if compute_distance(buy_planet.position, sell_planet.position) > 250:
                             continue
 
