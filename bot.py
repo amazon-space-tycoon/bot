@@ -201,7 +201,7 @@ class Game:
 
         if self.mothership:
             for enemy_id, enemy in self.other_ships.items():
-                if compute_distance(enemy.position, ship.position) < 10:
+                if compute_distance(enemy.position, self.data.ships[self.mothership].position) < 10:
                     self.commands[self.mothership] = AttackCommand(target=enemy_id)
                     break
             else:
