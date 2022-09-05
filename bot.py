@@ -258,7 +258,14 @@ class Game:
                 buy_fighter = "4"
 
             if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
-                self.commands[self.mothership] = ConstructCommand(ship_class=buy_fighter)
+                shipyard = None
+                if self.mothership:
+                    shipyard = self.mothership
+                elif self.my_shipyards:
+                    shipyard = random.choice(list(self.my_shipyards.keys()))
+
+                if shipyard:
+                    self.commands[shipyard] = ConstructCommand(ship_class=buy_fighter)
             return
 
         # no fighters needed, buy more traders
@@ -270,8 +277,14 @@ class Game:
             buy_trader = "3"
 
         if my_money > self.static_data.ship_classes[buy_trader].price + extra:
-            random_shipyard = random.choice(list(self.my_shipyards.keys()))
-            self.commands[random_shipyard] = ConstructCommand(ship_class=buy_trader)
+            shipyard = None
+            if self.mothership:
+                shipyard = self.mothership
+            elif self.my_shipyards:
+                shipyard = random.choice(list(self.my_shipyards.keys()))
+
+            if shipyard:
+                self.commands[shipyard] = ConstructCommand(ship_class=buy_trader)
 
     def calculate_center(self):
         center = [[], []]
