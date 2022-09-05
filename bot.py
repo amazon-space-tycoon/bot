@@ -20,6 +20,7 @@ from space_tycoon_client.models.move_command import MoveCommand
 from space_tycoon_client.models.trade_command import TradeCommand
 from space_tycoon_client.models.construct_command import ConstructCommand
 from space_tycoon_client.models.attack_command import AttackCommand
+from space_tycoon_client.models.repair_command import RepairCommand
 from space_tycoon_client.models.player import Player
 from space_tycoon_client.models.player_id import PlayerId
 from space_tycoon_client.models.ship import Ship
@@ -290,25 +291,12 @@ class Game:
 
         defense_dist = max(100, my_furthest_ship_dist * 2.5)
 
-        if self.mothership:
-            self.attack_or_defend_with(self.mothership, self.data.ships[self.mothership], defense_dist)
-
-        for ship_id, ship in self.my_fighters.items():
+        for ship_id, ship in self.my_fighters_and_mothership.items():
             self.attack_or_defend_with(ship_id, ship, defense_dist)
 
     def buy_ships(self):
         if not self.my_shipyards:
             return
-
-        my_net_worth = self.data.players[self.player_id].net_worth
-        my_money = my_net_worth.money
-        my_total = my_net_worth.total
-
-        # keep some money for trading
-        if len(self.other_ships):
-            extra = max(500000, (my_total - 10000000) // 5)
-        else:
-            extra = len(self.my_traders) * 20000
 
         if len(self.other_ships):
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
@@ -325,7 +313,7 @@ class Game:
 
             # we want more fighters!
             if buy_fighter:
-                if my_money > self.static_data.ship_classes[buy_fighter].price + extra:
+                if self.my_money >= self.static_data.ship_classes[buy_fighter].price + self.extra_money:
                     shipyard = None
                     if self.mothership:
                         shipyard = self.mothership
@@ -337,14 +325,14 @@ class Game:
                 return
 
         # no fighters needed, buy more traders
-        if my_total > 8000000:
+        if self.my_total > 8000000:
             # hauler
             buy_trader = "2"
         else:
             # shipper
             buy_trader = "3"
 
-        if my_money > self.static_data.ship_classes[buy_trader].price + extra:
+        if self.my_money >= self.static_data.ship_classes[buy_trader].price + self.extra_money:
             shipyard = None
             if self.mothership:
                 shipyard = self.mothership
@@ -353,6 +341,13 @@ class Game:
 
             if shipyard:
                 self.commands[shipyard] = ConstructCommand(ship_class=buy_trader)
+
+    def repair(self):
+        for ship_id, ship in self.my_fighters_and_mothership.items():
+            ship_class = self.static_data.ship_classes[ship.ship_class]
+            if ship.life <= ship_class.life - ship_class.repair_life and \
+               self.my_money >= ship_class.repair_price + self.extra_money:
+                self.commands[ship_id] = RepairCommand()
 
     def calculate_center(self):
         center = [[], []]
@@ -397,6 +392,11 @@ class Game:
 
         self.my_fighters = {ship_id: ship for ship_id, ship in
                             self.my_ships.items() if ship.ship_class == "4" or ship.ship_class == "5"}
+        self.my_fighters_and_mothership = {ship_id: ship for ship_id, ship in
+                                           self.my_ships.items() if (
+                                            ship.ship_class == "1" or
+                                            ship.ship_class == "4" or
+                                            ship.ship_class == "5")}
         self.my_traders = {ship_id: ship for ship_id, ship in
                            self.my_ships.items() if ship.ship_class == "2" or ship.ship_class == "3"}
         self.my_shipyards = {ship_id: ship for ship_id, ship in
@@ -407,6 +407,16 @@ class Game:
 
         self.center = self.calculate_center()
         self.closest_enemy_ship = self.calculate_closest_enemy_ship()
+
+        my_net_worth = self.data.players[self.player_id].net_worth
+        self.my_money = my_net_worth.money
+        self.my_total = my_net_worth.total
+
+        # keep some money for trading
+        if len(self.other_ships):
+            self.extra_money = max(500000, (self.my_total - 10000000) // 5)
+        else:
+            self.extra_money = len(self.my_traders) * 20000
 
         if self.closest_enemy_ship:
             if self.center[0]:
