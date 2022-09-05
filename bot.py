@@ -1,5 +1,6 @@
 import math
 import random
+import time
 import traceback
 from collections import Counter
 from pprint import pprint
@@ -68,7 +69,9 @@ class Game:
                 self.data: Data = self.client.data_get()
                 if self.data.player_id is None:
                     raise Exception("I am not correctly logged in. Bailing out")
+                start = time.time()
                 self.game_logic()
+                print(time.time() - start)
                 current_tick: CurrentTick = self.client.end_turn_post(EndTurn(
                     tick=self.tick,
                     season=self.season
@@ -86,10 +89,9 @@ class Game:
                 print(traceback.format_exc())
 
     def trade(self):
-        for ship_id, ship in self.my_ships.items():
-            if ship.ship_class != "2" and ship.ship_class != "3":  # shiper or hauler
-                continue
+        currently_buying = {}
 
+        for ship_id, ship in self.my_traders.items():
             ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
 
             if len(ship.resources):
@@ -145,7 +147,7 @@ class Game:
                                 if not buy_resource.amount:
                                     continue
 
-                                max_amt = min(buy_resource.amount, ship_capacity)
+                                max_amt = min(buy_resource.amount - currently_buying.get((buy_planet_id, buy_res_id), 0), ship_capacity)
                                 gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
                                 total_distance = compute_distance(ship.position, buy_planet.position) + \
                                     compute_distance(buy_planet.position, sell_planet.position) + \
@@ -158,7 +160,11 @@ class Game:
                                     best_buy_amt = max_amt
 
                 if best_trade:
-                    self.data.planets[best_buy_id].resources[best_buy_res].amount -= best_buy_amt
+                    currently_buying_key = (best_buy_id, best_buy_res)
+                    if currently_buying_key not in currently_buying:
+                        currently_buying[currently_buying_key] = 0
+
+                    currently_buying[currently_buying_key] += best_buy_amt
 
                     cmd = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
                     if ship.command and ship.command == cmd:
@@ -178,53 +184,38 @@ class Game:
 
         defense_dist = my_furthest_ship_dist * 2.2
 
-        closest_enemy_ship = ""
-        closest_enemy_ship_dist = 1000000.
+        for ship_id, ship in self.my_fighters.items():
+            if self.closest_enemy_ship and \
+               compute_distance(self.data.ships[self.closest_enemy_ship].position, self.center) < defense_dist:
 
-        for enemy_id, enemy in self.other_ships.items():
-            dist = compute_distance(enemy.position, self.center)
-            if dist < defense_dist and dist < closest_enemy_ship_dist:
-                closest_enemy_ship_dist = dist
-                closest_enemy_ship = enemy_id
+                self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+            else:
+                if self.center[0]:
+                    self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
 
-        for ship_id, ship in self.my_ships.items():
-            if ship.ship_class == "4" or ship.ship_class == "5":  # fighter or bomber
-                if closest_enemy_ship:
-                    self.commands[ship_id] = AttackCommand(target=closest_enemy_ship)
-                else:
-                    if self.center[0]:
-                        self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
-
-            elif ship.ship_class == "1":  # mothership
-                for enemy_id, enemy in self.other_ships.items():
-                    if compute_distance(enemy.position, ship.position) < 10:
-                        self.commands[ship_id] = AttackCommand(target=enemy_id)
-                        break
-                else:
-                    if self.center[0]:
-                        self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
+        if self.mothership:
+            for enemy_id, enemy in self.other_ships.items():
+                if compute_distance(enemy.position, ship.position) < 10:
+                    self.commands[self.mothership] = AttackCommand(target=enemy_id)
+                    break
+            else:
+                if self.center[0]:
+                    self.commands[self.mothership] = MoveCommand(destination=Destination(coordinates=self.center))
 
     def buy_ships(self):
-        my_shipyards: Dict[Ship] = {ship_id: ship for ship_id, ship in
-                                    self.my_ships.items() if self.static_data.ship_classes[ship.ship_class].shipyard}
-
-        if not my_shipyards:
+        if not self.my_shipyards:
             return
 
         my_money = self.data.players[self.player_id].net_worth.money
 
-        fighters_count = len([1 for ship in self.my_ships.values() if ship.ship_class == "4" or ship.ship_class == "5"])
-        traders_count = len([1 for ship in self.my_ships.values() if ship.ship_class == "2" or ship.ship_class == "3"])
+        fighters_count = len(self.my_fighters)
+        traders_count = len(self.my_traders)
         if fighters_count < traders_count // 3 + 2 and my_money > self.static_data.ship_classes["4"].price:
             self.commands[self.mothership] = ConstructCommand(ship_class="4")
             return
 
-        trading_ships_total = 0
-        for ship in self.my_ships.values():
-            if ship.ship_class == "2" or ship.ship_class == "3":  # shiper or hauler
-                trading_ships_total += self.static_data.ship_classes[ship.ship_class].price
         if my_money - 2000000 > 0:
-            random_shipyard = random.choice(list(my_shipyards.keys()))
+            random_shipyard = random.choice(list(self.my_shipyards.keys()))
             self.commands[random_shipyard] = ConstructCommand(ship_class="3")
 
     def calculate_center(self):
@@ -243,6 +234,18 @@ class Game:
 
         return center
 
+    def calculate_closest_enemy_ship(self):
+        closest_enemy_ship = None
+        closest_enemy_ship_dist = 1000000.
+
+        for enemy_id, enemy in self.other_ships.items():
+            dist = compute_distance(enemy.position, self.center)
+            if dist < closest_enemy_ship_dist:
+                closest_enemy_ship_dist = dist
+                closest_enemy_ship = enemy_id
+
+        return closest_enemy_ship
+
     def game_logic(self):
         # todo throw all this away
         self.recreate_me()
@@ -250,10 +253,19 @@ class Game:
                                      self.data.ships.items() if ship.player == self.player_id}
         self.other_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                         self.data.ships.items() if ship.player != self.player_id}
+
+        self.my_fighters = {ship_id: ship for ship_id, ship in
+                            self.my_ships.items() if ship.ship_class == "4" or ship.ship_class == "5"}
+        self.my_traders = {ship_id: ship for ship_id, ship in
+                           self.my_ships.items() if ship.ship_class == "2" or ship.ship_class == "3"}
+        self.my_shipyards = {ship_id: ship for ship_id, ship in
+                             self.my_ships.items() if self.static_data.ship_classes[ship.ship_class].shipyard}
+
         mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
         self.mothership = mothership_list[0] if mothership_list else None
 
         self.center = self.calculate_center()
+        self.closest_enemy_ship = self.calculate_closest_enemy_ship()
 
         ship_type_cnt = Counter(
             (self.static_data.ship_classes[ship.ship_class].name for ship in self.my_ships.values()))
