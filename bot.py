@@ -99,8 +99,8 @@ class Game:
             for enemy in self.other_ships.values():
                 if enemy.ship_class == "1" or enemy.ship_class == "4" or enemy.ship_class == "5":
                     if compute_distance(enemy.position, ship.position) < 20:
-                        nearest_enemy_center[0] = enemy.position[0]
-                        nearest_enemy_center[1] = enemy.position[1]
+                        nearest_enemy_center[0].append(enemy.position[0])
+                        nearest_enemy_center[1].append(enemy.position[1])
 
             if nearest_enemy_center[0]:
                 nearest_enemy_center[0] = int(sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0]))
