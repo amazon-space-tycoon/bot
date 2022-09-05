@@ -120,8 +120,12 @@ class Game:
                 if self.center[0]:
                     center_vec = normalize_vec([self.center[0] - ship.position[0],
                                                 self.center[1] - ship.position[1]])
-                    avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0] * 0.5,
-                                               avoid_vec[1] + center_vec[1] * 0.5])
+                    if self.my_fighters or self.mothership:
+                        avoid_vec = normalize_vec([avoid_vec[0] + center_vec[0] * 0.5,
+                                                   avoid_vec[1] + center_vec[1] * 0.5])
+                    else:
+                        avoid_vec = normalize_vec([avoid_vec[0] - center_vec[0] * 0.5,
+                                                   avoid_vec[1] - center_vec[1] * 0.5])
 
                 map_center_vec = normalize_vec([-ship.position[0],
                                                 -ship.position[1]])
