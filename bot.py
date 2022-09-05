@@ -269,7 +269,7 @@ class Game:
             return
 
         # no fighters needed, buy more traders
-        if my_total > 10000000:
+        if my_total > 8000000:
             # hauler
             buy_trader = "2"
         else:
