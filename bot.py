@@ -516,7 +516,7 @@ class Game:
         return True
 
     def victory_dance(self):
-        radius = 200
+        radius = 150
         speed = 0.01
 
         ship_count = len(self.my_ships)
@@ -528,9 +528,14 @@ class Game:
             if ship_id == self.mothership:
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
             else:
+                ring_pos = (math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
+                if math.fmod(ring_pos, math.pi * 2) < math.pi:
+                    heart = math.sin(-ring_pos * 2) * 75
+                else:
+                    heart = math.sin(ring_pos * 2) * 75
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
-                    int(math.sin((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
-                    int(math.cos((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
+                    int(math.sin(ring_pos) * (radius + heart)),
+                    int(math.cos(ring_pos) * (radius + heart)),
                 ]))
                 i += 1
 
