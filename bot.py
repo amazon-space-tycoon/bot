@@ -417,8 +417,13 @@ class Game:
             # if we are currently attacking, we have enough money for a repair and enough life lost, then repair
             if ship_id in self.commands and self.commands[ship_id].type == "attack":
                 ship_class = self.static_data.ship_classes[ship.ship_class]
-                if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
-                    self.commands[ship_id] = RepairCommand()
+                if ship.ship_class == "1":
+                    if ship.life <= ship_class.life - (2*ship_class.repair_life) and self.my_money >= ship_class.repair_price:
+                        self.commands[ship_id] = RepairCommand()
+                elif (ship.ship_class == "5" or ship.ship_class == "4") and len(self.my_fighters) > 5:
+                    if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
+                        self.commands[ship_id] = RepairCommand()
+
 
         # also repair escaping traders if we have enough others to cover the loss
         if not self.my_fighters_and_mothership and len(self.my_traders) >= 5:
