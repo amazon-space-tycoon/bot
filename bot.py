@@ -315,9 +315,9 @@ class Game:
                 # if not, let's look at the closest enemy ship
                 for enemy_id, enemy in self.other_ships.items():
                     if compute_distance(enemy.position, ship.position) < 20:
-                        self.commands[ship_id] = AttackCommand(target=self.enemy_id)
+                        self.commands[ship_id] = AttackCommand(target=enemy_id)
                         if is_mothership:
-                            self.last_enemy_target = ship_id
+                            self.last_enemy_target = enemy_id
                         break
                 else:
                     if self.closest_enemy_ship:
@@ -438,7 +438,7 @@ class Game:
 
                     if len_vec(avoid_vec1) > len_vec(avoid_vec2):
                         avoid_vec = normalize_vec([-avoid_vec[1] + avoid_vec[0],
-                                                   avoid_vec[0]] + avoid_vec[1])
+                                                   avoid_vec[0] + avoid_vec[1]])
                     else:
                         avoid_vec = normalize_vec([avoid_vec[1] + avoid_vec[0],
                                                    -avoid_vec[0] + avoid_vec[1]])
