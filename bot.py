@@ -490,6 +490,10 @@ class Game:
         self.my_shipyards = {ship_id: ship for ship_id, ship in
                              self.my_ships.items() if self.static_data.ship_classes[ship.ship_class].shipyard}
 
+        self.ship_distances = {ship_id: {other_id: compute_distance(ship.position, other.position)
+                                         for other_id, other in self.data.ships.items()}
+                               for ship_id, ship in self.data.ships.items()}
+
         mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
         self.mothership = mothership_list[0] if mothership_list else None
 
