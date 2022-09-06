@@ -272,6 +272,27 @@ class Game:
                                                           amount=best_buy_amt)
 
     def attack_or_defend_with(self, ship_id, ship, defense_dist):
+        is_mothership = self.mothership and ship_id == self.mothership
+
+        if is_mothership:
+            if not self.last_enemy_target or (self.last_enemy_target and
+               self.last_enemy_target in self.data.ships and
+               self.data.ships[self.last_enemy_target].ship_class != "5"):
+                closest_bomber = None
+                closest_bomber_dist = 20.
+
+                for enemy_id, enemy in self.other_ships.items():
+                    if enemy.ship_class != "5":
+                        continue
+
+                    dist = compute_distance(enemy.position, ship.position)
+                    if dist < closest_bomber_dist:
+                        closest_bomber_dist = dist
+                        closest_bomber = enemy_id
+
+                if closest_bomber:
+                    self.last_enemy_target = closest_bomber
+
         # we are currently fighting a ship, attack it if it's close
         if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
            compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
@@ -299,7 +320,7 @@ class Game:
                     )))):
                 self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                 # if this is a mothership, save the enemy ship as our target
-                if self.mothership and ship_id == self.mothership:
+                if is_mothership:
                     self.last_enemy_target = self.closest_enemy_ship
             # if this is not a mothership, but we have one and an enemy is within our defense ring
             # follow the mothership
@@ -310,14 +331,14 @@ class Game:
                 if self.center[0]:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
                 # if this is a mothership, reset our target
-                if self.mothership and ship_id == self.mothership:
+                if is_mothership:
                     self.last_enemy_target = None
         # there is no closest enemy ship
         else:
             if self.center[0]:
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=self.center))
             # if this is a mothership, reset our target
-            if self.mothership and ship_id == self.mothership:
+            if is_mothership:
                 self.last_enemy_target = None
 
     def attack(self):
