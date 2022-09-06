@@ -165,7 +165,7 @@ class Game:
 
                 for sell_planet_id, sell_planet in self.data.planets.items():
                     for enemy_id, enemy in self.other_ships.items():
-                        if enemy.ship_class in ["1", "4", "5"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist:
+                        if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist:
                             break
                     else:
                         for ship_res_id, ship_resource in ship.resources.items():
@@ -213,12 +213,12 @@ class Game:
 
                 for buy_planet_id, buy_planet in self.data.planets.items():
                     for enemy_id, enemy in self.other_ships.items():
-                        if enemy.ship_class in ["1", "4", "5"] and compute_distance(buy_planet.position, enemy.position) < avoid_dist:
+                        if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(buy_planet.position, enemy.position) < avoid_dist:
                             break
                     else:
                         for sell_planet_id, sell_planet in self.planet_neighbors[buy_planet_id]:
                             for enemy_id, enemy in self.other_ships.items():
-                                if enemy.ship_class in ["1", "4", "5"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist:
+                                if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist:
                                     break
                             else:
                                 for buy_res_id, buy_resource in buy_planet.resources.items():
@@ -279,7 +279,7 @@ class Game:
     def attack_or_defend_with(self, ship_id, ship):
         is_mothership = self.mothership and ship_id == self.mothership
 
-        if is_mothership or ship.name.startswith("defender"):
+        if is_mothership:
             if not self.last_enemy_target or (self.last_enemy_target and
                self.last_enemy_target in self.data.ships and (
                     self.data.ships[self.last_enemy_target].ship_class != "5" or
@@ -302,7 +302,7 @@ class Game:
                 if closest_fighter:
                     self.last_enemy_target = closest_fighter
 
-        if is_mothership or sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]) == 0:
+        if is_mothership or sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]) == 0 or ship.name.startswith("defender"):
             # we are currently fighting a ship, attack it if it's close
             if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
                compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
@@ -352,6 +352,9 @@ class Game:
             target_dist = 10000000.
             target_class = None
             for enemy_id, enemy in self.other_ships.items():
+                if enemy.ship_class == "1" or enemy.ship_class == "6":
+                    continue
+
                 dist = compute_distance(enemy.position, ship.position)
                 if enemy.ship_class == "4" and dist < fight_dist:
                     target = enemy
@@ -500,6 +503,31 @@ class Game:
                     if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
                         self.commands[ship_id] = RepairCommand()
 
+    def victory(self):
+        if self.other_ships:
+            return False
+
+        for player_id, player in self.data.players.items():
+            if player_id == self.player_id:
+                continue
+            if player.net_worth.total > self.my_total:
+                return False
+
+        return True
+
+    def victory_dance(self):
+        radius = 200
+        speed = 0.01
+
+        ship_count = len(self.my_ships)
+        i = 0
+        for ship_id in sorted(list(self.my_ships.keys())):
+            self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
+                int(math.sin((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
+                int(math.cos((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
+            ]))
+            i += 1
+
     def calculate_center(self):
         center = [[], []]
         for ship in self.my_traders.values():
@@ -587,7 +615,7 @@ class Game:
         # keep some money for trading and repairs
         if len(self.other_ships):
             # TODO maybe look at other players' money and try to have more
-            self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
+            self.extra_money = max(500000, (self.my_total - 10000000) // 5)
         else:
             self.extra_money = len(self.my_traders) * 20000
 
@@ -611,14 +639,18 @@ class Game:
 
         self.commands = {}
 
-        self.trade()
-        self.attack()
-        self.buy_ships()
-        self.repair()
+        if not self.victory():
+            self.trade()
+            self.attack()
+            self.buy_ships()
+            self.repair()
+        else:
+            self.victory_dance()
 
-        if sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender")) < 1:
-            ship_id, ship = random.choice(list(self.my_fighters.items()))
-            self.commands[ship_id] = RenameCommand(name="defender1")
+        if self.my_fighters:
+            if sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender")) < 1:
+                ship_id, ship = random.choice(list(self.my_fighters.items()))
+                self.commands[ship_id] = RenameCommand(name="defender1")
 
         pprint(self.commands) if self.commands else None
         try:
