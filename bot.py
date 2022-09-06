@@ -388,7 +388,7 @@ class Game:
                     int(ship.position[0] + avoid_vec[0] * 100),
                     int(ship.position[1] + avoid_vec[1] * 100),
                 ]))
-            else:
+            elif target:
                 self.commands[ship_id] = AttackCommand(target=target_id)
 
     def attack(self):
@@ -464,7 +464,11 @@ class Game:
                     if ship.life <= ship_class.life - (2*ship_class.repair_life) and self.my_money >= ship_class.repair_price:
                         self.commands[ship_id] = RepairCommand()
                 elif (ship.ship_class == "5" or ship.ship_class == "4"):
-                    if ship_id in self.commands and self.commands[ship_id].type == "attack" and self.commands[ship_id].target in self.data.ships and self.data.ships[self.commands[ship_id].target].ship_class != "1":
+                    if ship_id in self.commands and \
+                       self.commands[ship_id].type == "attack" and \
+                       self.commands[ship_id].target in self.data.ships and \
+                       self.data.ships[self.commands[ship_id].target].ship_class != "1" and \
+                       ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
                         self.commands[ship_id] = RepairCommand()
 
         # also repair escaping traders if we have enough others to cover the loss
