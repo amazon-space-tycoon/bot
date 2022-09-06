@@ -17,6 +17,7 @@ from space_tycoon_client.models.data import Data
 from space_tycoon_client.models.destination import Destination
 from space_tycoon_client.models.end_turn import EndTurn
 from space_tycoon_client.models.move_command import MoveCommand
+from space_tycoon_client.models.rename_command import RenameCommand
 from space_tycoon_client.models.trade_command import TradeCommand
 from space_tycoon_client.models.construct_command import ConstructCommand
 from space_tycoon_client.models.attack_command import AttackCommand
@@ -278,7 +279,7 @@ class Game:
     def attack_or_defend_with(self, ship_id, ship):
         is_mothership = self.mothership and ship_id == self.mothership
 
-        if is_mothership:
+        if is_mothership or ship.name.startswith("defender"):
             if not self.last_enemy_target or (self.last_enemy_target and
                self.last_enemy_target in self.data.ships and (
                     self.data.ships[self.last_enemy_target].ship_class != "5" or
@@ -330,10 +331,6 @@ class Game:
                     self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                     if is_mothership:
                         self.last_enemy_target = self.closest_enemy_ship
-                # if this is not a mothership, but we have one and an enemy is within our defense ring
-                # follow the mothership
-                elif self.mothership and ship_id != self.mothership and dist_center < self.defense_dist:
-                    self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
                 # otherwise, try to keep in the middle of our traders
                 else:
                     if self.center[0]:
@@ -434,26 +431,18 @@ class Game:
         if self.last_enemy_target:
             return
 
+        buy_trader = None
+
         # if there are still some enemy ships, buy fighters
         if sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]):
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
-            bombers_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "5")
             traders_count = len(self.my_traders)
             # magic
-            # want_fighters = traders_count // 4 - 1
-            want_fighters = traders_count // 5 + 1
-            # want_bombers = traders_count // 5 + 1
-            want_bombers = 0
-
-            buy_fighter = None
-            # prefer bombers
-            if bombers_count < want_bombers:
-                buy_fighter = "5"
-            elif fighters_count < want_fighters:
-                buy_fighter = "4"
+            want_fighters = traders_count // 5 + 2
 
             # we want more fighters!
-            if buy_fighter:
+            if fighters_count < want_fighters:
+                buy_fighter = "4"
                 if self.my_money >= self.static_data.ship_classes[buy_fighter].price + self.extra_money:
                     shipyard = None
                     # prefer buying from the mothership
@@ -465,14 +454,17 @@ class Game:
                     if shipyard:
                         self.commands[shipyard] = ConstructCommand(ship_class=buy_fighter)
                 return
+        else:
+            buy_trader = "2"
 
         # no fighters needed, buy more traders
-        if self.my_total > 8000000:
-            # hauler
-            buy_trader = "2"
-        else:
-            # shipper
-            buy_trader = "3"
+        if not buy_trader:
+            if self.my_total > 8000000:
+                # hauler
+                buy_trader = "2"
+            else:
+                # shipper
+                buy_trader = "3"
 
         if self.my_money >= self.static_data.ship_classes[buy_trader].price + self.extra_money:
             shipyard = None
@@ -623,6 +615,10 @@ class Game:
         self.attack()
         self.buy_ships()
         self.repair()
+
+        if sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender")) < 1:
+            ship_id, ship = random.choice(list(self.my_fighters.items()))
+            self.commands[ship_id] = RenameCommand(name="defender1")
 
         pprint(self.commands) if self.commands else None
         try:
