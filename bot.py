@@ -276,22 +276,25 @@ class Game:
 
         if is_mothership:
             if not self.last_enemy_target or (self.last_enemy_target and
-               self.last_enemy_target in self.data.ships and
-               self.data.ships[self.last_enemy_target].ship_class != "5"):
-                closest_bomber = None
-                closest_bomber_dist = 20.
+               self.last_enemy_target in self.data.ships and (
+                    self.data.ships[self.last_enemy_target].ship_class != "5" or
+                    self.data.ships[self.last_enemy_target].ship_class != "4")):
+                closest_fighter = None
+                closest_fighter_class = None
+                closest_fighter_dist = 20.
 
                 for enemy_id, enemy in self.other_ships.items():
-                    if enemy.ship_class != "5":
+                    if enemy.ship_class != "5" and enemy.ship_class != "4":
                         continue
 
                     dist = compute_distance(enemy.position, ship.position)
-                    if dist < closest_bomber_dist:
-                        closest_bomber_dist = dist
-                        closest_bomber = enemy_id
+                    if ((not closest_fighter_class or enemy.ship_class == closest_fighter_class) and dist < closest_fighter_dist) or (
+                            closest_fighter_class == "4" and enemy.ship_class == "5" and dist < 20):
+                        closest_fighter_dist = dist
+                        closest_fighter = enemy_id
 
-                if closest_bomber:
-                    self.last_enemy_target = closest_bomber
+                if closest_fighter:
+                    self.last_enemy_target = closest_fighter
 
         # we are currently fighting a ship, attack it if it's close
         if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
