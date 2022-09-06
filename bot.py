@@ -271,7 +271,7 @@ class Game:
                                                           resource=best_buy_res,
                                                           amount=best_buy_amt)
 
-    def attack_or_defend_with(self, ship_id, ship, defense_dist):
+    def attack_or_defend_with(self, ship_id, ship):
         is_mothership = self.mothership and ship_id == self.mothership
 
         if is_mothership:
@@ -292,6 +292,7 @@ class Game:
                             closest_fighter_class == "4" and enemy.ship_class == "5" and dist < 20):
                         closest_fighter_dist = dist
                         closest_fighter = enemy_id
+                        closest_fighter_class = enemy.ship_class
 
                 if closest_fighter:
                     self.last_enemy_target = closest_fighter
@@ -309,7 +310,7 @@ class Game:
             # we either don't have a mothership, this is a normal ship and the nearby enemy is a trader
             # or if this is a mothership and the nearby ship is not a trader
             if dist_ship < 20 or (
-                dist_center < defense_dist and ((
+                dist_center < self.defense_dist and ((
                     not self.mothership
                 ) or (
                     ship_id != self.mothership and (
@@ -327,7 +328,7 @@ class Game:
                     self.last_enemy_target = self.closest_enemy_ship
             # if this is not a mothership, but we have one and an enemy is within our defense ring
             # follow the mothership
-            elif self.mothership and ship_id != self.mothership and dist_center < defense_dist:
+            elif self.mothership and ship_id != self.mothership and dist_center < self.defense_dist:
                 self.commands[ship_id] = MoveCommand(destination=Destination(target=self.mothership))
             # otherwise, try to keep in the middle of our traders
             else:
@@ -345,18 +346,9 @@ class Game:
                 self.last_enemy_target = None
 
     def attack(self):
-        # find our furthest ship and calculate our defense ring
-        my_furthest_ship_dist = 0.
-        for ship_id, ship in self.my_traders.items():
-            dist = compute_distance(ship.position, self.center)
-            if dist > my_furthest_ship_dist:
-                my_furthest_ship_dist = dist
-
-        defense_dist = max(150, my_furthest_ship_dist * 2.5)
-
         # and attack (or defend)
         for ship_id, ship in self.my_fighters_and_mothership.items():
-            self.attack_or_defend_with(ship_id, ship, defense_dist)
+            self.attack_or_defend_with(ship_id, ship)
 
     def buy_ships(self):
         # nowhere to buy ships from
@@ -423,10 +415,20 @@ class Game:
                 if ship.ship_class == "1":
                     if ship.life <= ship_class.life - (2*ship_class.repair_life) and self.my_money >= ship_class.repair_price:
                         self.commands[ship_id] = RepairCommand()
+                # change this, repair between fights?
+                elif (ship.ship_class == "5" or ship.ship_class == "4") and \
+                        self.last_enemy_target and \
+                        self.last_enemy_target in self.data.ships and \
+                        self.data.ships[self.last_enemy_target].ship_class != "4" and \
+                        self.data.ships[self.last_enemy_target].ship_class != "5":
+                    if sum(1 for other, dist in self.ship_distances[ship_id].items() if dist < 50 and self.data.ships[other].player != self.player_id and (self.data.ships[other].ship_class == "4" or self.data.ships[other].ship_class == "5")) > 0:
+                        if ship.life <= ship_class.life and self.my_money >= ship_class.repair_price:
+                            self.commands[ship_id] = RepairCommand()
+                    if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
+                        self.commands[ship_id] = RepairCommand()
                 elif (ship.ship_class == "5" or ship.ship_class == "4") and len(self.my_fighters) > 5:
                     if ship.life <= ship_class.life - ship_class.repair_life and self.my_money >= ship_class.repair_price:
                         self.commands[ship_id] = RepairCommand()
-
 
         # also repair escaping traders if we have enough others to cover the loss
         if not self.my_fighters_and_mothership and len(self.my_traders) >= 5:
@@ -453,6 +455,7 @@ class Game:
     def calculate_closest_enemy_ship(self):
         closest_enemy_ship = None
         closest_enemy_ship_dist = 1000000.
+        closest_enemy_ship_class = None
 
         for enemy_id, enemy in self.other_ships.items():
             dist = compute_distance(enemy.position, self.center)
@@ -460,12 +463,15 @@ class Game:
                 dist -= 25
             elif enemy.ship_class == "1":
                 dist += 25
-            elif enemy.ship_class == "2" or enemy.ship_class == "3":
+            elif enemy.ship_class in ["2", "3"]:
                 dist += 100
 
-            if dist < closest_enemy_ship_dist:
+            if ((not closest_enemy_ship_class or enemy.ship_class == closest_enemy_ship_class) and dist < closest_enemy_ship_dist) or \
+               (dist < self.defense_dist and closest_enemy_ship_class in ["2", "3"] and enemy.ship_class in ["1", "4", "5"]) or \
+               (dist < self.defense_dist and closest_enemy_ship_class in ["1", "2", "3"] and enemy.ship_class in ["4", "5"]):
                 closest_enemy_ship_dist = dist
                 closest_enemy_ship = enemy_id
+                closest_enemy_ship_class = enemy.ship_class
 
         return closest_enemy_ship
 
@@ -496,6 +502,15 @@ class Game:
 
         mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
         self.mothership = mothership_list[0] if mothership_list else None
+
+        # find our furthest ship and calculate our defense ring
+        my_furthest_ship_dist = 0.
+        for ship_id, ship in self.my_traders.items():
+            dist = compute_distance(ship.position, self.center)
+            if dist > my_furthest_ship_dist:
+                my_furthest_ship_dist = dist
+
+        self.defense_dist = max(150, my_furthest_ship_dist * 2.5)
 
         self.center = self.calculate_center()
         self.closest_enemy_ship = self.calculate_closest_enemy_ship()
