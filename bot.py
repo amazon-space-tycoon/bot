@@ -356,9 +356,19 @@ class Game:
                 if ((not target_class or enemy.ship_class == target_class) and dist < target_dist) or \
                    (target_class in ["1", "4", "5"] and enemy.ship_class in ["2", "3"]) or \
                    (target_class in ["1"] and enemy.ship_class in ["4", "5", "2", "3"]):
-                    target = enemy
-                    target_id = enemy_id
-                    target_dist = dist
+                    if enemy.ship_class in ["2", "3"]:
+                        for close_id, dist in self.ship_distances[enemy_id].items():
+                            if dist < 125:
+                                if close_id in self.data.ships and self.data.ships[close_id].ship_class in ["1", "4", "5", "6"]:
+                                    break
+                        else:
+                            target = enemy
+                            target_id = enemy_id
+                            target_dist = dist
+                    else:
+                        target = enemy
+                        target_id = enemy_id
+                        target_dist = dist
 
             # if there are enemies nearby
             if nearest_enemy_center[0] and target_class in ["2", "3"]:
