@@ -470,7 +470,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 5 + 2
+            want_fighters = traders_count // 5 + 1
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -558,7 +558,7 @@ class Game:
         i = 0
         for ship_id in sorted(list(self.my_ships.keys())):
             if ship_id == self.mothership:
-                if self.my_money > self.static_data.ship_classes["3"].price:
+                if self.my_money >= self.static_data.ship_classes["3"].price:
                     self.commands[ship_id] = ConstructCommand(ship_class="3")
                 else:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
@@ -614,10 +614,13 @@ class Game:
         self.recreate_me()
 
         # precalculate some things
+        allied_player_names = ["ducks"]
+        allied_players = [player_id for player_id, player in self.data.players.items() if player.name in allied_player_names]
+
         self.my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
                                      self.data.ships.items() if ship.player == self.player_id}
         self.other_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
-                                        self.data.ships.items() if ship.player != self.player_id}
+                                        self.data.ships.items() if ship.player != self.player_id and ship.player not in allied_players}
 
         self.my_fighters = {ship_id: ship for ship_id, ship in
                             self.my_ships.items() if ship.ship_class == "4" or ship.ship_class == "5"}
@@ -693,10 +696,13 @@ class Game:
         else:
             self.victory_dance()
 
-        if self.my_fighters:
-            if sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender")) < 2:
-                ship_id, ship = random.choice(list(self.my_fighters.items()))
-                self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
+        attackers = {ship_id: ship for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and not ship.name.startswith("defender")}
+        # defender_count = sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender"))
+        # if attackers and defender_count < 2:
+        #     ship_id, ship = random.choice(list(attackers.items()))
+        #     self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
+        for ship_id, ship in attackers.items():
+            self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
 
         pprint(self.commands) if self.commands else None
         try:
