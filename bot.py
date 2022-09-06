@@ -503,6 +503,8 @@ class Game:
         mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
         self.mothership = mothership_list[0] if mothership_list else None
 
+        self.center = self.calculate_center()
+
         # find our furthest ship and calculate our defense ring
         my_furthest_ship_dist = 0.
         for ship_id, ship in self.my_traders.items():
@@ -512,7 +514,6 @@ class Game:
 
         self.defense_dist = max(150, my_furthest_ship_dist * 2.5)
 
-        self.center = self.calculate_center()
         self.closest_enemy_ship = self.calculate_closest_enemy_ship()
 
         my_net_worth = self.data.players[self.player_id].net_worth
