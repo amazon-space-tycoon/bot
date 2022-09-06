@@ -507,6 +507,9 @@ class Game:
         if self.other_ships:
             return False
 
+        if self.data.current_tick.tick < 1800:
+            return False
+
         for player_id, player in self.data.players.items():
             if player_id == self.player_id:
                 continue
@@ -526,7 +529,10 @@ class Game:
         i = 0
         for ship_id in sorted(list(self.my_ships.keys())):
             if ship_id == self.mothership:
-                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
+                if self.my_money > self.static_data.ship_classes["3"].price:
+                    self.commands[ship_id] = ConstructCommand(ship_class="3")
+                else:
+                    self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
             else:
                 ring_pos = (math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
                 if math.fmod(ring_pos, math.pi * 2) < math.pi:
