@@ -520,13 +520,19 @@ class Game:
         speed = 0.01
 
         ship_count = len(self.my_ships)
+        if self.mothership:
+            ship_count -= 1
+
         i = 0
         for ship_id in sorted(list(self.my_ships.keys())):
-            self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
-                int(math.sin((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
-                int(math.cos((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
-            ]))
-            i += 1
+            if ship_id == self.mothership:
+                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
+            else:
+                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
+                    int(math.sin((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
+                    int(math.cos((math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))) * radius),
+                ]))
+                i += 1
 
     def calculate_center(self):
         center = [[], []]
