@@ -482,7 +482,7 @@ class Game:
                         self.commands[ship_id] = RepairCommand()
 
         # also repair escaping traders if we have enough others to cover the loss
-        if not self.my_fighters_and_mothership and len(self.my_traders) >= 5:
+        if not self.my_fighters_and_mothership and len(self.my_traders) > 8:
             for ship_id, ship in self.my_traders.items():
                 if ship_id in self.commands and self.commands[ship_id].type == "move":
                     ship_class = self.static_data.ship_classes[ship.ship_class]
