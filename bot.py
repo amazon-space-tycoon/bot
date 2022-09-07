@@ -282,6 +282,12 @@ class Game:
         # TODO if there are only motherships left, guard them
 
         # if not is_mothership and sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class == "1") > 0 and not ship.name.startswith("defender"):
+        avoid_dist = 200
+        fight_dist = 30
+
+        target = None
+        target_id = None
+        target_class = None
 
         if is_mothership or sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]) == 0 or ship.name.startswith("defender"):
             if is_mothership:
@@ -310,12 +316,18 @@ class Game:
             # we are currently fighting a ship, attack it if it's close
             if self.last_enemy_target and self.last_enemy_target in self.data.ships and \
                compute_distance(self.data.ships[self.last_enemy_target].position, ship.position) < 20:
-                self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
+                target = self.data.ships[self.last_enemy_target]
+                target_id = self.last_enemy_target
+                target_class = self.data.ships[self.last_enemy_target].ship_class
+                # self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
             else:
                 # if not, let's look at the closest enemy ship
                 for enemy_id, enemy in self.other_ships.items():
                     if compute_distance(enemy.position, ship.position) < 20:
-                        self.commands[ship_id] = AttackCommand(target=enemy_id)
+                        target = enemy
+                        target_id = enemy_id
+                        target_class = enemy.ship_class
+                        # self.commands[ship_id] = AttackCommand(target=enemy_id)
                         if is_mothership:
                             self.last_enemy_target = enemy_id
                         break
@@ -332,7 +344,10 @@ class Game:
                                 (not is_mothership) and closest_enemy_ship.ship_class in ["2", "3", "4", "5"]
                             ) or (
                                 is_mothership and closest_enemy_ship.ship_class in ["1", "4", "5"]))):
-                            self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
+                            target = closest_enemy_ship
+                            target_id = self.closest_enemy_ship
+                            target_class = closest_enemy_ship.ship_class
+                            # self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                             if is_mothership:
                                 self.last_enemy_target = self.closest_enemy_ship
                         # otherwise, try to keep in the middle of our traders
@@ -348,14 +363,8 @@ class Game:
                         if is_mothership:
                             self.last_enemy_target = None
         else:
-            avoid_dist = 200
-            fight_dist = 30
-
-            target = None
-            target_id = None
             target_dist = 10000000.
             target_defense_dist = 0.
-            target_class = None
             for enemy_id, enemy in self.other_ships.items():
                 if enemy.ship_class == "1" or enemy.ship_class == "6":
                     continue
@@ -397,58 +406,58 @@ class Game:
                         target_defense_dist = enemy_defense_dist
                         target_class = enemy.ship_class
 
-            nearest_enemy_center = [[], []]
-            if target_class in ["2", "3"]:
-                for enemy_id, enemy in self.other_ships.items():
-                    dist = compute_distance(enemy.position, ship.position)
-                    if (enemy.ship_class in ["4", "5"] and dist < avoid_dist) or \
-                       (enemy.ship_class in ["1", "6"] and dist < avoid_dist // 2):
-                        nearest_enemy_center[0].append(enemy.position[0])
-                        nearest_enemy_center[1].append(enemy.position[1])
-            elif target_class in ["4", "5"]:
-                for enemy_id, enemy in self.other_ships.items():
-                    dist = compute_distance(enemy.position, ship.position)
-                    if enemy.ship_class in ["1", "6"] and dist < avoid_dist:
-                        nearest_enemy_center[0].append(enemy.position[0])
-                        nearest_enemy_center[1].append(enemy.position[1])
+        nearest_enemy_center = [[], []]
+        if target_class in ["2", "3"]:
+            for enemy_id, enemy in self.other_ships.items():
+                dist = compute_distance(enemy.position, ship.position)
+                if (enemy.ship_class in ["4", "5"] and dist < avoid_dist) or \
+                    (enemy.ship_class in ["1", "6"] and dist < avoid_dist // 2):
+                    nearest_enemy_center[0].append(enemy.position[0])
+                    nearest_enemy_center[1].append(enemy.position[1])
+        elif target_class in ["4", "5"]:
+            for enemy_id, enemy in self.other_ships.items():
+                dist = compute_distance(enemy.position, ship.position)
+                if enemy.ship_class in ["1", "6"] and dist < avoid_dist:
+                    nearest_enemy_center[0].append(enemy.position[0])
+                    nearest_enemy_center[1].append(enemy.position[1])
 
-            target_vec = None
+        target_vec = None
+        if target:
+            target_vec = normalize_vec([target.position[0] - ship.position[0],
+                                        target.position[1] - ship.position[1]])
+        avoid = False
+        if nearest_enemy_center[0]:
+            avoid = True
+            nearest_enemy_center[0] = sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0])
+            nearest_enemy_center[1] = sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1])
+
+        # if there are enemies nearby
+        if avoid and ((not target) or (
+                compute_distance([ship.position[0] + target_vec[0] * 15, ship.position[1] + target_vec[1] * 15], nearest_enemy_center) \
+                < compute_distance(ship.position, nearest_enemy_center))):
+            # run away from their average position
+            avoid_vec = normalize_vec([ship.position[0] - nearest_enemy_center[0],
+                                        ship.position[1] - nearest_enemy_center[1]])
+
             if target:
-                target_vec = normalize_vec([target.position[0] - ship.position[0],
-                                            target.position[1] - ship.position[1]])
-            avoid = False
-            if nearest_enemy_center[0]:
-                avoid = True
-                nearest_enemy_center[0] = sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0])
-                nearest_enemy_center[1] = sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1])
+                avoid_vec1 = [-avoid_vec[1] + target_vec[0] * 0.5,
+                                avoid_vec[0] + target_vec[1] * 0.5]
+                avoid_vec2 = [avoid_vec[1] + target_vec[0] * 0.5,
+                                -avoid_vec[0] + target_vec[1] * 0.5]
 
-            # if there are enemies nearby
-            if avoid and ((not target) or (
-                    compute_distance([ship.position[0] + target_vec[0] * 15, ship.position[1] + target_vec[1] * 15], nearest_enemy_center) \
-                    < compute_distance(ship.position, nearest_enemy_center))):
-                # run away from their average position
-                avoid_vec = normalize_vec([ship.position[0] - nearest_enemy_center[0],
-                                           ship.position[1] - nearest_enemy_center[1]])
+                if len_vec(avoid_vec1) > len_vec(avoid_vec2):
+                    avoid_vec = normalize_vec([-avoid_vec[1] + avoid_vec[0] * 0.5,
+                                                avoid_vec[0] + avoid_vec[1] * 0.5])
+                else:
+                    avoid_vec = normalize_vec([avoid_vec[1] + avoid_vec[0] * 0.5,
+                                                -avoid_vec[0] + avoid_vec[1] * 0.5])
 
-                if target:
-                    avoid_vec1 = [-avoid_vec[1] + target_vec[0] * 0.5,
-                                  avoid_vec[0] + target_vec[1] * 0.5]
-                    avoid_vec2 = [avoid_vec[1] + target_vec[0] * 0.5,
-                                  -avoid_vec[0] + target_vec[1] * 0.5]
-
-                    if len_vec(avoid_vec1) > len_vec(avoid_vec2):
-                        avoid_vec = normalize_vec([-avoid_vec[1] + avoid_vec[0] * 0.5,
-                                                   avoid_vec[0] + avoid_vec[1] * 0.5])
-                    else:
-                        avoid_vec = normalize_vec([avoid_vec[1] + avoid_vec[0] * 0.5,
-                                                   -avoid_vec[0] + avoid_vec[1] * 0.5])
-
-                self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
-                    int(ship.position[0] + avoid_vec[0] * 100),
-                    int(ship.position[1] + avoid_vec[1] * 100),
-                ]))
-            elif target:
-                self.commands[ship_id] = AttackCommand(target=target_id)
+            self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
+                int(ship.position[0] + avoid_vec[0] * 100),
+                int(ship.position[1] + avoid_vec[1] * 100),
+            ]))
+        elif target:
+            self.commands[ship_id] = AttackCommand(target=target_id)
 
     def attack(self):
         # and attack (or defend)
