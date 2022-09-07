@@ -536,20 +536,28 @@ class Game:
         if self.other_ships:
             return False
 
-        if self.data.current_tick.tick < 1800:
+        if self.data.current_tick.tick < 3000:
             return False
 
         for player_id, player in self.data.players.items():
             if player_id == self.player_id:
                 continue
-            if player.net_worth.total > self.my_total:
+            if player.net_worth.total > self.my_total - 10000000:
                 return False
 
         return True
 
     def victory_dance(self):
         radius = 150
-        speed = 0.01
+        curvature = 50
+        spin_speed = 0.005
+        pulse_speed = 0.2
+        pulse_amount = 7.5
+        rotation_amount = 0.1
+        rotation_speed = pulse_speed / 2.
+
+        pulse = math.sin(math.pi * (float(self.data.current_tick.tick) * pulse_speed)) * pulse_amount
+        rotation = math.sin(math.pi * (float(self.data.current_tick.tick) * rotation_speed)) * rotation_amount
 
         ship_count = len(self.my_ships)
         if self.mothership:
@@ -563,14 +571,14 @@ class Game:
                 else:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
             else:
-                ring_pos = (math.pi * (float(self.data.current_tick.tick) * speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
-                if math.fmod(ring_pos, math.pi * 2) < math.pi:
-                    heart = math.sin(-ring_pos * 2) * 75
+                ring_pos = (math.pi * (float(self.data.current_tick.tick) * spin_speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
+                if math.fmod(ring_pos + rotation, math.pi * 2) < math.pi:
+                    heart = math.sin(-(ring_pos + rotation) * 2) * curvature
                 else:
-                    heart = math.sin(ring_pos * 2) * 75
+                    heart = math.sin((ring_pos + rotation) * 2) * curvature
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
-                    int(math.sin(ring_pos) * (radius + heart)),
-                    int(math.cos(ring_pos) * (radius + heart)),
+                    int(math.sin(ring_pos) * (radius + heart + pulse)),
+                    int(math.cos(ring_pos) * (radius + heart + pulse)),
                 ]))
                 i += 1
 
