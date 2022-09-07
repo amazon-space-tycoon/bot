@@ -331,7 +331,7 @@ class Game:
                             dist_center < self.defense_dist and ((
                                 (not is_mothership) and closest_enemy_ship.ship_class in ["2", "3", "4", "5"]
                             ) or (
-                                is_mothership and closest_enemy_ship.ship_class in ["4", "5"]))):
+                                is_mothership and closest_enemy_ship.ship_class in ["1", "4", "5"]))):
                             self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                             if is_mothership:
                                 self.last_enemy_target = self.closest_enemy_ship
@@ -437,11 +437,11 @@ class Game:
                                   -avoid_vec[0] + target_vec[1] * 0.5]
 
                     if len_vec(avoid_vec1) > len_vec(avoid_vec2):
-                        avoid_vec = normalize_vec([-avoid_vec[1] + avoid_vec[0],
-                                                   avoid_vec[0] + avoid_vec[1]])
+                        avoid_vec = normalize_vec([-avoid_vec[1] + avoid_vec[0] * 0.5,
+                                                   avoid_vec[0] + avoid_vec[1] * 0.5])
                     else:
-                        avoid_vec = normalize_vec([avoid_vec[1] + avoid_vec[0],
-                                                   -avoid_vec[0] + avoid_vec[1]])
+                        avoid_vec = normalize_vec([avoid_vec[1] + avoid_vec[0] * 0.5,
+                                                   -avoid_vec[0] + avoid_vec[1] * 0.5])
 
                 self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[
                     int(ship.position[0] + avoid_vec[0] * 100),
@@ -470,7 +470,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 5 + 1
+            want_fighters = traders_count // 7 + 2
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -670,9 +670,9 @@ class Game:
         self.my_total = my_net_worth.total
 
         # keep some money for trading and repairs
-        if len(self.other_ships):
+        if self.other_ships:
             # TODO maybe look at other players' money and try to have more
-            self.extra_money = max(500000, (self.my_total - 10000000) // 5)
+            self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
         else:
             self.extra_money = len(self.my_traders) * 20000
 
@@ -680,7 +680,7 @@ class Game:
             if self.center[0]:
                 dist = compute_distance(self.center, self.data.ships[self.closest_enemy_ship].position)
                 if dist != 0:
-                    self.center_dist_cost = 1000 / dist
+                    self.center_dist_cost = 500 / dist
                 else:
                     self.center_dist_cost = 1000
             else:
@@ -705,12 +705,12 @@ class Game:
             self.victory_dance()
 
         attackers = {ship_id: ship for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and not ship.name.startswith("defender")}
-        # defender_count = sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender"))
-        # if attackers and defender_count < 2:
-        #     ship_id, ship = random.choice(list(attackers.items()))
-        #     self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
-        for ship_id, ship in attackers.items():
+        defender_count = sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender"))
+        if attackers and defender_count < 1:
+            ship_id, ship = random.choice(list(attackers.items()))
             self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
+        # for ship_id, ship in attackers.items():
+        #     self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
 
         pprint(self.commands) if self.commands else None
         try:
