@@ -497,7 +497,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 7 + 2
+            want_fighters = traders_count // 25 + 2
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -518,7 +518,7 @@ class Game:
 
         # no fighters needed, buy more traders
         if not buy_trader:
-            if self.my_total > 8000000:
+            if self.my_total > 7500000:
                 # hauler
                 buy_trader = "2"
             else:
@@ -699,7 +699,7 @@ class Game:
         # keep some money for trading and repairs
         if self.other_ships:
             # TODO maybe look at other players' money and try to have more
-            self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
+            self.extra_money = max(500000, ((self.my_total - 2000000) // 10))
         else:
             self.extra_money = len(self.my_traders) * 5000
 
@@ -707,9 +707,9 @@ class Game:
             if self.center[0]:
                 dist = compute_distance(self.center, self.data.ships[self.closest_enemy_ship].position)
                 if dist != 0:
-                    self.center_dist_cost = 500 / dist
+                    self.center_dist_cost = 200 / dist
                 else:
-                    self.center_dist_cost = 1000
+                    self.center_dist_cost = 200
             else:
                 self.center_dist_cost = 1
         else:
