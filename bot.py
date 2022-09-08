@@ -701,7 +701,7 @@ class Game:
             # TODO maybe look at other players' money and try to have more
             self.extra_money = max(1000000, (self.my_total - 10000000) // 5)
         else:
-            self.extra_money = len(self.my_traders) * 20000
+            self.extra_money = len(self.my_traders) * 10000
 
         if self.closest_enemy_ship:
             if self.center[0]:
