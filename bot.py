@@ -108,6 +108,7 @@ class Game:
 
     def trade(self):
         avoid_dist = 100
+        empty_penalty = 5
 
         for ship_id, ship in self.my_traders.items():
             # enemy ship avoidance
@@ -155,7 +156,10 @@ class Game:
 
                 continue
 
-            ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity
+            sell_gain = 0.
+            sell_cmd = None
+            buy_gain = 0.
+            buy_cmd = None
 
             # we have resources that we can sell
             if len(ship.resources):
@@ -191,21 +195,14 @@ class Game:
                                     best_sell_res = sell_res_id
 
                 if best_trade:
-                    cmd = TradeCommand(target=best_sell_id,
-                                       resource=best_sell_res,
-                                       amount=-ship.resources[best_sell_res]["amount"])
-                    # don't resend the same command
-                    if ship.command and \
-                       ship.command.type == "trade" and \
-                       ship.command.target == cmd.target and \
-                       ship.command.resource == cmd.resource and \
-                       ship.command.amount == cmd.amount:
-                        continue
+                    sell_gain = best_trade
+                    sell_cmd = TradeCommand(target=best_sell_id,
+                                            resource=best_sell_res,
+                                            amount=-ship.resources[best_sell_res]["amount"])
 
-                    print(f"sending {ship_id} to {self.data.planets[best_sell_id].name}({best_sell_id})")
-                    self.commands[ship_id] = cmd
+            ship_capacity = self.static_data.ship_classes[ship.ship_class].cargo_capacity  - sum(resource["amount"] for resource in ship.resources.values())
             # we are looking for resources to buy
-            else:
+            if ship_capacity:
                 best_trade = 0.
                 best_buy_id = ""
                 best_buy_res = ""
@@ -237,16 +234,16 @@ class Game:
                                             buy_res_id
                                         ), 0), ship_capacity)
                                         gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
-                                        total_distance = compute_distance(ship.position, buy_planet.position) + \
+                                        total_distance = (compute_distance(ship.position, buy_planet.position) * empty_penalty) + \
                                             compute_distance(buy_planet.position, sell_planet.position)
                                         # if we have a mothership, try to keep close
                                         if self.mothership:
-                                            total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
-                                            total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * self.center_dist_cost
+                                            total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * (self.center_dist_cost / 2)
+                                            total_distance += compute_distance(sell_planet.position, self.data.ships[self.mothership].position) * (self.center_dist_cost / 2)
                                         # if not, but we have other fighters, try to keep close as well
                                         elif self.my_fighters and self.center[0]:
-                                            total_distance += compute_distance(buy_planet.position, self.center) * self.center_dist_cost
-                                            total_distance += compute_distance(sell_planet.position, self.center) * self.center_dist_cost
+                                            total_distance += compute_distance(buy_planet.position, self.center) * (self.center_dist_cost / 2)
+                                            total_distance += compute_distance(sell_planet.position, self.center) * (self.center_dist_cost / 2)
 
                                         gain = float(gain_raw) / float(total_distance)
                                         if gain > best_trade:
@@ -256,28 +253,39 @@ class Game:
                                             best_buy_amt = max_amt
 
                 if best_trade:
-                    currently_buying_key = (best_buy_id, best_buy_res)
-                    if currently_buying_key not in self.currently_buying:
-                        self.currently_buying[currently_buying_key] = 0
+                    buy_gain = best_trade
+                    buy_cmd = TradeCommand(target=best_buy_id,
+                                           resource=best_buy_res,
+                                           amount=best_buy_amt)
 
-                    self.currently_buying[currently_buying_key] += best_buy_amt
+            final_cmd = None
+            if buy_cmd and ((not sell_cmd) or (buy_gain > sell_gain / empty_penalty)):
+                currently_buying_key = (best_buy_id, best_buy_res)
+                if currently_buying_key not in self.currently_buying:
+                    self.currently_buying[currently_buying_key] = 0
 
-                    cmd = TradeCommand(target=best_buy_id, resource=best_buy_res, amount=best_buy_amt)
-                    # don't resend the same command
-                    if ship.command and \
-                       ship.command.type == "trade" and \
-                       ship.command.target == cmd.target and \
-                       ship.command.resource == cmd.resource and \
-                       ship.command.amount == cmd.amount:
-                        continue
+                self.currently_buying[currently_buying_key] += best_buy_amt
 
-                    print(f"sending {ship_id} to {self.data.planets[best_buy_id].name}({best_buy_id})")
-                    self.commands[ship_id] = TradeCommand(target=best_buy_id,
-                                                          resource=best_buy_res,
-                                                          amount=best_buy_amt)
+                final_cmd = buy_cmd
+            elif sell_cmd:
+                final_cmd = sell_cmd
+
+            if final_cmd:
+                # don't resend the same command
+                if ship.command and \
+                    ship.command.type == "trade" and \
+                    ship.command.target == final_cmd.target and \
+                    ship.command.resource == final_cmd.resource and \
+                    ship.command.amount == final_cmd.amount:
+                    continue
+
+                # print(f"sending {ship_id} to {ship.command.target}")
+                self.commands[ship_id] = final_cmd
 
     def attack_or_defend_with(self, ship_id, ship):
         is_mothership = self.mothership and ship_id == self.mothership
+        # is_defender = ship.name.startswith("defender")
+        is_defender = True
 
         # TODO if there are only motherships left, guard them
 
@@ -289,7 +297,7 @@ class Game:
         target_id = None
         target_class = None
 
-        if is_mothership or sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]) == 0 or ship.name.startswith("defender"):
+        if is_mothership or sum(1 for ship_id, ship in self.other_ships.items() if ship.ship_class in ["2", "3", "4", "5"]) == 0 or is_defender:
             if is_mothership:
                 if not self.last_enemy_target or (self.last_enemy_target and
                    self.last_enemy_target in self.data.ships and (
@@ -479,7 +487,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 7 + 2
+            want_fighters = traders_count // 7 + 1
 
             # we want more fighters!
             if fighters_count < want_fighters:
