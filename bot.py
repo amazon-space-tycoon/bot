@@ -53,6 +53,9 @@ def normalize_vec(vec):
     return vec
 
 
+unstuck_len = 10
+
+
 class Game:
     def __init__(self, api_client: GameApi, config: Dict[str, str]):
         self.me: Optional[Player] = None
@@ -65,6 +68,8 @@ class Game:
         self.tick = self.data.current_tick.tick
         # this part is custom logic, feel free to edit / delete
         self.last_enemy_target = None
+
+        self.prev_positions = {}
 
         if self.player_id not in self.data.players:
             raise Exception("Logged as non-existent player")
@@ -641,6 +646,20 @@ class Game:
 
         return closest_enemy_ship
 
+    def unstuck(self):
+        for ship_id, ship in self.my_traders.items():
+            if ship_id in self.prev_positions:
+                for pos in self.prev_positions[ship_id]:
+                    if not pos or pos[0] != ship.position[0] or pos[1] != ship.position[1]:
+                        break
+                else:
+                    self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
+
+        for ship_id, ship in self.my_traders.items():
+            if ship_id not in self.prev_positions:
+                self.prev_positions[ship_id] = [[] for _ in range(unstuck_len)]
+            self.prev_positions[ship_id][self.tick % unstuck_len] = ship.position
+
     def game_logic(self):
         self.recreate_me()
 
@@ -738,6 +757,7 @@ class Game:
             if self.tick % 2:
                 self.buy_ships()
             self.repair()
+            self.unstuck()
 
         attackers = {ship_id: ship for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and not ship.name.startswith("defender")}
         defender_count = sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender"))
