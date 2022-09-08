@@ -424,18 +424,20 @@ class Game:
                         target_defense_dist = enemy_defense_dist
                         target_class = enemy.ship_class
 
+        health_pct = ship.life / self.static_data.ship_classes[ship.ship_class].life
+
         nearest_enemy_center = [[], []]
         if target_class in ["2", "3"]:
             for enemy_id, enemy in self.other_ships.items():
                 dist = compute_distance(enemy.position, ship.position)
-                if (enemy.ship_class in ["4", "5"] and dist < avoid_dist) or \
-                    (enemy.ship_class in ["1", "6"] and dist < avoid_dist // 2):
+                if (enemy.ship_class in ["4", "5"] and dist < avoid_dist * (2 - health_pct)) or \
+                    (enemy.ship_class in ["1", "6"] and dist < avoid_dist / 2 * (2 - health_pct)):
                     nearest_enemy_center[0].append(enemy.position[0])
                     nearest_enemy_center[1].append(enemy.position[1])
         elif target_class in ["4", "5"]:
             for enemy_id, enemy in self.other_ships.items():
                 dist = compute_distance(enemy.position, ship.position)
-                if enemy.ship_class in ["1", "6"] and dist < avoid_dist // 2:
+                if enemy.ship_class in ["1", "6"] and dist < avoid_dist / 2 * (2 - health_pct):
                     nearest_enemy_center[0].append(enemy.position[0])
                     nearest_enemy_center[1].append(enemy.position[1])
 
