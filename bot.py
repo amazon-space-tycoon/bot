@@ -64,11 +64,6 @@ class Game:
         self.season = self.data.current_tick.season
         self.tick = self.data.current_tick.tick
         # this part is custom logic, feel free to edit / delete
-
-        self.planet_neighbors = {planet_id: [(neigh_id, neigh)
-                                             for neigh_id, neigh in self.data.planets.items()
-                                             if compute_distance(planet.position, neigh.position) < 300]
-                                 for planet_id, planet in self.data.planets.items()}
         self.last_enemy_target = None
 
         if self.player_id not in self.data.players:
@@ -108,7 +103,7 @@ class Game:
 
     def trade(self):
         avoid_dist = 100
-        empty_penalty = len(self.my_traders) / 10.
+        empty_penalty = min(2., len(self.my_traders) / 10.)
 
         for ship_id, ship in self.my_traders.items():
             # enemy ship avoidance
@@ -213,12 +208,12 @@ class Game:
                         if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(buy_planet.position, enemy.position) < avoid_dist * 2:
                             break
                     else:
-                        for sell_planet_id, sell_planet in self.planet_neighbors[buy_planet_id]:
-                            for enemy_id, enemy in self.other_ships.items():
-                                if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist * 2:
-                                    break
-                            else:
-                                for buy_res_id, buy_resource in buy_planet.resources.items():
+                        for buy_res_id, buy_resource in buy_planet.resources.items():
+                            for sell_planet_id, sell_planet in self.planet_resource_neighbors[buy_planet_id][buy_res_id].items():
+                                for enemy_id, enemy in self.other_ships.items():
+                                    if enemy.ship_class in ["1", "4", "5", "6"] and compute_distance(sell_planet.position, enemy.position) < avoid_dist * 2:
+                                        break
+                                else:
                                     for sell_res_id, sell_resource in sell_planet.resources.items():
                                         if buy_res_id != sell_res_id:
                                             continue
@@ -444,7 +439,7 @@ class Game:
             target_vec = normalize_vec([target.position[0] - ship.position[0],
                                         target.position[1] - ship.position[1]])
         avoid = False
-        if nearest_enemy_center[0]:
+        if nearest_enemy_center[0] and not is_mothership:
             avoid = True
             nearest_enemy_center[0] = sum(nearest_enemy_center[0]) / len(nearest_enemy_center[0])
             nearest_enemy_center[1] = sum(nearest_enemy_center[1]) / len(nearest_enemy_center[1])
@@ -497,7 +492,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 25 + 2
+            want_fighters = traders_count // 25 + 1
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -518,7 +513,7 @@ class Game:
 
         # no fighters needed, buy more traders
         if not buy_trader:
-            if self.my_total > 7500000:
+            if self.my_total > 5000000:
                 # hauler
                 buy_trader = "2"
             else:
@@ -563,13 +558,14 @@ class Game:
         if self.other_ships:
             return False
 
-        if self.tick < 3000:
+        if self.tick < 3450:
             return False
 
         for player_id, player in self.data.players.items():
             if player_id == self.player_id:
                 continue
-            if player.net_worth.total > self.my_total - 10000000:
+
+            if ((player.net_worth.total / self.tick) * (3600 - self.tick)) > ((self.my_total - player.net_worth.total) / 2):
                 return False
 
         return True
@@ -676,6 +672,16 @@ class Game:
         mothership_list = [ship_id for ship_id, ship in self.my_ships.items() if ship.ship_class == "1"]
         self.mothership = mothership_list[0] if mothership_list else None
 
+        self.planet_neighbors = {planet_id: {neigh_id: neigh
+                                             for neigh_id, neigh in self.data.planets.items()
+                                             if compute_distance(planet.position, neigh.position) < 400}
+                                 for planet_id, planet in self.data.planets.items()}
+        self.planet_resource_neighbors = {planet_id: {resource_id: {neigh_id: neigh
+                                                                    for neigh_id, neigh in self.planet_neighbors[planet_id].items()
+                                                                    if resource_id in neigh.resources and neigh.resources[resource_id].sell_price}
+                                                      for resource_id in self.static_data.resource_names.keys()}
+                                          for planet_id, planet in self.data.planets.items()}
+
         self.currently_buying = {}
         self.currently_guarding = set()
 
@@ -699,7 +705,7 @@ class Game:
         # keep some money for trading and repairs
         if self.other_ships:
             # TODO maybe look at other players' money and try to have more
-            self.extra_money = max(500000, ((self.my_total - 2000000) // 10))
+            self.extra_money = max(1000000, ((self.my_total - 2000000) // 10))
         else:
             self.extra_money = len(self.my_traders) * 5000
 
@@ -707,9 +713,9 @@ class Game:
             if self.center[0]:
                 dist = compute_distance(self.center, self.data.ships[self.closest_enemy_ship].position)
                 if dist != 0:
-                    self.center_dist_cost = 200 / dist
+                    self.center_dist_cost = 500 / dist
                 else:
-                    self.center_dist_cost = 200
+                    self.center_dist_cost = 500
             else:
                 self.center_dist_cost = 1
         else:
