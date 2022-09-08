@@ -108,7 +108,7 @@ class Game:
 
     def trade(self):
         avoid_dist = 100
-        empty_penalty = 3
+        empty_penalty = len(self.my_traders) / 10.
 
         for ship_id, ship in self.my_traders.items():
             # enemy ship avoidance
@@ -435,7 +435,7 @@ class Game:
         elif target_class in ["4", "5"]:
             for enemy_id, enemy in self.other_ships.items():
                 dist = compute_distance(enemy.position, ship.position)
-                if enemy.ship_class in ["1", "6"] and dist < avoid_dist:
+                if enemy.ship_class in ["1", "6"] and dist < avoid_dist // 2:
                     nearest_enemy_center[0].append(enemy.position[0])
                     nearest_enemy_center[1].append(enemy.position[1])
 
@@ -497,7 +497,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 7 + 1
+            want_fighters = traders_count // 7 + 2
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -563,7 +563,7 @@ class Game:
         if self.other_ships:
             return False
 
-        if self.data.current_tick.tick < 3000:
+        if self.tick < 3000:
             return False
 
         for player_id, player in self.data.players.items():
@@ -583,8 +583,8 @@ class Game:
         rotation_amount = 0.1
         rotation_speed = pulse_speed / 2.
 
-        pulse = math.sin(math.pi * (float(self.data.current_tick.tick) * pulse_speed)) * pulse_amount
-        rotation = math.sin(math.pi * (float(self.data.current_tick.tick) * rotation_speed)) * rotation_amount
+        pulse = math.sin(math.pi * (float(self.tick) * pulse_speed)) * pulse_amount
+        rotation = math.sin(math.pi * (float(self.tick) * rotation_speed)) * rotation_amount
 
         ship_count = len(self.my_ships)
         if self.mothership:
@@ -598,7 +598,7 @@ class Game:
                 else:
                     self.commands[ship_id] = MoveCommand(destination=Destination(coordinates=[0, 0]))
             else:
-                ring_pos = (math.pi * (float(self.data.current_tick.tick) * spin_speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
+                ring_pos = (math.pi * (float(self.tick) * spin_speed)) + (math.pi * 2 * (float(i) / float(ship_count)))
                 if math.fmod(ring_pos + rotation, math.pi * 2) < math.pi:
                     heart = math.sin(-(ring_pos + rotation) * 2) * curvature
                 else:
@@ -723,13 +723,15 @@ class Game:
 
         self.commands = {}
 
-        if not self.victory():
+        if self.victory():
+            self.victory_dance()
+        else:
             self.trade()
             self.attack()
-            self.buy_ships()
+            # only buy ships every other frame to avoid duplicate construct commands
+            if self.tick % 2:
+                self.buy_ships()
             self.repair()
-        else:
-            self.victory_dance()
 
         attackers = {ship_id: ship for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and not ship.name.startswith("defender")}
         defender_count = sum(1 for ship_id, ship in self.my_fighters.items() if ship.ship_class == "4" and ship.name.startswith("defender"))
