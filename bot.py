@@ -108,7 +108,7 @@ class Game:
 
     def trade(self):
         avoid_dist = 100
-        empty_penalty = 5
+        empty_penalty = 3
 
         for ship_id, ship in self.my_traders.items():
             # enemy ship avoidance
@@ -233,9 +233,19 @@ class Game:
                                             buy_planet_id,
                                             buy_res_id
                                         ), 0), ship_capacity)
-                                        gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * max_amt
-                                        total_distance = (compute_distance(ship.position, buy_planet.position) * empty_penalty) + \
-                                            compute_distance(buy_planet.position, sell_planet.position)
+                                        if max_amt == 0:
+                                            continue
+
+                                        final_amt = max_amt
+                                        if buy_res_id in ship.resources:
+                                            final_amt += ship.resources[buy_res_id]["amount"]
+
+                                        gain_raw = (sell_resource.sell_price - buy_resource.buy_price) * final_amt
+                                        total_distance = compute_distance(ship.position, buy_planet.position) * empty_penalty
+                                        if sell_cmd:
+                                            total_distance += compute_distance(self.data.planets[sell_cmd.target].position, sell_planet.position)
+                                        else:
+                                            total_distance += compute_distance(buy_planet.position, sell_planet.position)
                                         # if we have a mothership, try to keep close
                                         if self.mothership:
                                             total_distance += compute_distance(buy_planet.position, self.data.ships[self.mothership].position) * (self.center_dist_cost / 2)
@@ -245,7 +255,7 @@ class Game:
                                             total_distance += compute_distance(buy_planet.position, self.center) * (self.center_dist_cost / 2)
                                             total_distance += compute_distance(sell_planet.position, self.center) * (self.center_dist_cost / 2)
 
-                                        gain = float(gain_raw) / float(total_distance)
+                                        gain = float(gain_raw) / float(total_distance) if total_distance != 0 else gain_raw * 1000.
                                         if gain > best_trade:
                                             best_trade = gain
                                             best_buy_id = buy_planet_id
