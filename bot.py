@@ -662,7 +662,7 @@ class Game:
         self.recreate_me()
 
         # precalculate some things
-        allied_player_names = ["ducks"]
+        allied_player_names = [player.name for player in self.data.players.values()]
         allied_players = [player_id for player_id, player in self.data.players.items() if player.name in allied_player_names]
 
         self.my_ships: Dict[Ship] = {ship_id: ship for ship_id, ship in
