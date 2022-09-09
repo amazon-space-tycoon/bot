@@ -294,8 +294,7 @@ class Game:
 
     def attack_or_defend_with(self, ship_id, ship):
         is_mothership = self.mothership and ship_id == self.mothership
-        # is_defender = ship.name.startswith("defender")
-        is_defender = True
+        is_defender = ship.name.startswith("defender")
 
         # TODO if there are only motherships left, guard them
 
@@ -337,7 +336,6 @@ class Game:
                 target = self.data.ships[self.last_enemy_target]
                 target_id = self.last_enemy_target
                 target_class = self.data.ships[self.last_enemy_target].ship_class
-                # self.commands[ship_id] = AttackCommand(target=self.last_enemy_target)
             else:
                 # if not, let's look at the closest enemy ship
                 for enemy_id, enemy in self.other_ships.items():
@@ -345,7 +343,6 @@ class Game:
                         target = enemy
                         target_id = enemy_id
                         target_class = enemy.ship_class
-                        # self.commands[ship_id] = AttackCommand(target=enemy_id)
                         if is_mothership:
                             self.last_enemy_target = enemy_id
                         break
@@ -365,7 +362,6 @@ class Game:
                             target = closest_enemy_ship
                             target_id = self.closest_enemy_ship
                             target_class = closest_enemy_ship.ship_class
-                            # self.commands[ship_id] = AttackCommand(target=self.closest_enemy_ship)
                             if is_mothership:
                                 self.last_enemy_target = self.closest_enemy_ship
                         # otherwise, try to keep in the middle of our traders
@@ -499,7 +495,7 @@ class Game:
             fighters_count = sum(1 for ship in self.my_fighters.values() if ship.ship_class == "4")
             traders_count = len(self.my_traders)
             # magic
-            want_fighters = traders_count // 25 + 1
+            want_fighters = traders_count // 25 + 2
 
             # we want more fighters!
             if fighters_count < want_fighters:
@@ -766,8 +762,6 @@ class Game:
         if attackers and defender_count < 1:
             ship_id, ship = random.choice(list(attackers.items()))
             self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
-        # for ship_id, ship in attackers.items():
-        #     self.commands[ship_id] = RenameCommand(name="defender_"+ship_id)
 
         pprint(self.commands) if self.commands else None
         try:
